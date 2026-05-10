@@ -1,0 +1,5 @@
+Luôn sử dụng:
+- Backend: FastAPI, Motor (MongoDB), Pydantic.
+- Frontend: Next.js (App Router), Tailwind CSS, TypeScript.
+- Nguyên tắc: Code sạch, có comment tiếng Việt, xử lý async/await cẩn thận.
+- AI: Ưu tiên tối ưu hóa bộ nhớ khi gọi SAM và Stable Diffusion.

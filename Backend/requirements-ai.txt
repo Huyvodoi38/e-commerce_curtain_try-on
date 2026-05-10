@@ -1,0 +1,24 @@
+# ============================================================
+# Dependencies cho AI Engine (Try-on rèm).
+# Chỉ cài khi đã sẵn sàng chạy SAM + Stable Diffusion.
+#
+# CÀI ĐẶT:
+#   1. Cài torch theo hướng dẫn chính thức cho đúng CUDA của máy:
+#        https://pytorch.org/get-started/locally/
+#      (nếu không có GPU, cài bản CPU; pipeline vẫn chạy nhưng rất chậm)
+#   2. pip install -r requirements-ai.txt
+# ============================================================
+
+torch>=2.1.0
+torchvision>=0.16.0
+
+diffusers==0.30.3
+transformers==4.44.2
+accelerate==0.34.2
+safetensors==0.4.5
+controlnet_aux==0.0.9
+segment-anything==1.0
+
+# Xử lý ảnh nâng cao (dilate mask, depth map…)
+opencv-python-headless==4.10.0.84
+numpy==1.26.4

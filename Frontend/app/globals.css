@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 250 247 242;
+  --foreground: 31 24 14;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 31 24 14;
+    --foreground: 241 233 220;
+  }
+}
+
+html,
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+body {
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
