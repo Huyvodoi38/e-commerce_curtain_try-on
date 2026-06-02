@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { tryRestoreSession } from '@/features/auth/api'
 import { clearAccessToken } from '@/lib/auth/tokenStore'
+import { AuthBootstrapContext } from '@/app/providers/AuthBootstrapContext'
 
 type Props = {
   children: ReactNode
@@ -35,13 +36,15 @@ export function AuthBootstrap({ children }: Props) {
     }
   }, [queryClient])
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-surface text-foreground-subtle">
-        Đang tải…
-      </div>
-    )
-  }
-
-  return children
+  return (
+    <AuthBootstrapContext.Provider value={{ isBootstrapping: !ready }}>
+      {!ready ? (
+        <div className="flex min-h-screen items-center justify-center bg-surface text-foreground-subtle">
+          Đang tải…
+        </div>
+      ) : (
+        children
+      )}
+    </AuthBootstrapContext.Provider>
+  )
 }

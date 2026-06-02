@@ -57,6 +57,14 @@ Chi tiết: `FE_SPEC.md` §3.2, `backend/BE_SPEC_PROGRESS.md` §5.1.1.
 | `npm run build` | Build production |
 | `npm run preview` | Xem bản build |
 
+## Thanh toán VNPay
+
+- FE nhận `payment_url` từ backend sau checkout với `payment_method = vnpay`.
+- User được redirect sang cổng VNPay; sau khi thanh toán quay về route:
+  - `/orders/:id/pay/return`
+- FE không tự xác nhận thanh toán bằng return query; trạng thái đơn được cập nhật từ backend (IPN).
+- Nếu chưa nhận IPN, trang return sẽ poll chi tiết đơn theo chu kỳ ngắn và hiển thị trạng thái chờ.
+
 ## Production
 
 Copy `frontend/.env.production.example` → `.env.production`, set `VITE_API_URL=https://api.example.com`, rồi `npm run build`. Xem `backend/.env.production.example` cho cookie cross-site (`SameSite=None`).

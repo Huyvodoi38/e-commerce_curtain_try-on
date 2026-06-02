@@ -12,6 +12,7 @@ import {
 } from '@/lib/orders/statusLabels'
 import { formatShippingAddress } from '@/lib/vietnam-admin/formatAddress'
 import { formatVnd } from '@/lib/utils/formatCurrency'
+import { getBankInstructions } from '@/lib/orders/bankInstructionsStore'
 
 type LocationState = {
   bankInstructions?: BankInstructions | null
@@ -35,7 +36,7 @@ export function MyOrderDetailPage() {
   const cancelMutation = useCancelMyOrderMutation(id)
 
   const order = orderQuery.data
-  const bankFromNav = navState?.bankInstructions ?? null
+  const bankFromNav = navState?.bankInstructions ?? getBankInstructions(id)
   const showBank =
     bankFromNav &&
     order?.offline_subtype === 'bank' &&
@@ -90,8 +91,8 @@ export function MyOrderDetailPage() {
         order.status === 'pending' &&
         !showBank ? (
           <p className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
-            Thông tin chuyển khoản chỉ hiển thị ngay sau khi đặt hàng. Nếu bạn đã đóng trang, vui lòng
-            liên hệ hỗ trợ với mã đơn <span className="font-mono">{order.id}</span>.
+            Không tìm thấy thông tin chuyển khoản đã lưu trên thiết bị này. Vui lòng liên hệ hỗ trợ
+            với mã đơn <span className="font-mono">{order.id}</span>.
           </p>
         ) : null}
 

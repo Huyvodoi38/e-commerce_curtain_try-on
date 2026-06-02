@@ -1,6 +1,7 @@
 """Cấu hình ứng dụng sử dụng pydantic-settings."""
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -74,6 +75,47 @@ class Settings(BaseSettings):
         if explicit:
             return explicit
         return f"{self.FRONTEND_URL.rstrip('/')}/auth/google/callback"
+
+    @staticmethod
+    def _is_local_url(url: str) -> bool:
+        host = (urlparse(url).hostname or "").lower()
+        return host in {"localhost", "127.0.0.1"}
+
+    @staticmethod
+    def _host(url: str) -> str:
+        return (urlparse(url).hostname or "").lower()
+
+    @property
+    def is_production_like(self) -> bool:
+        return not (
+            self._is_local_url(self.FRONTEND_URL) and self._is_local_url(self.BACKEND_URL)
+        )
+
+    def validate_runtime_safety(self) -> None:
+        """Fail-fast các cấu hình dễ gây lỗi bảo mật ở production."""
+
+        if not self.is_production_like:
+            return
+
+        if self.CORS_ALLOW_ALL:
+            raise ValueError("CORS_ALLOW_ALL phải là false trên production")
+
+        if not self.COOKIE_SECURE:
+            raise ValueError("COOKIE_SECURE phải là true trên production")
+
+        frontend_host = self._host(self.FRONTEND_URL)
+        backend_host = self._host(self.BACKEND_URL)
+        if frontend_host and backend_host and frontend_host != backend_host:
+            if self.COOKIE_SAMESITE.lower() != "none":
+                raise ValueError(
+                    "COOKIE_SAMESITE phải là 'none' khi frontend và backend khác domain"
+                )
+
+        if self.GOOGLE_REDIRECT_URI.strip() and self._is_local_url(self.GOOGLE_REDIRECT_URI):
+            raise ValueError("GOOGLE_REDIRECT_URI production không được dùng localhost")
+
+        if self.VNPAY_IPN_URL.strip() and self._is_local_url(self.VNPAY_IPN_URL):
+            raise ValueError("VNPAY_IPN_URL production phải là URL public")
 
 
 settings = Settings()

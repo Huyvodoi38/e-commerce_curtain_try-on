@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+import logging
 from datetime import timedelta
 from typing import Any
 
@@ -27,11 +28,12 @@ from app.payments.vnpay.signing import build_payment_query_string, verify_secure
 from app.services import audit_service
 
 _VNPAY_SUCCESS_CODE = "00"
+logger = logging.getLogger(__name__)
 
 
 def _log_ipn(event: str, **fields: object) -> None:
     payload = " ".join(f"{k}={v}" for k, v in fields.items())
-    print(f"[VNPAY_IPN] event={event} {payload}".strip())
+    logger.info("[VNPAY_IPN] event=%s %s", event, payload.strip())
 
 
 def _require_vnpay_config() -> None:

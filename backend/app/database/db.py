@@ -1,5 +1,7 @@
 """Khởi tạo kết nối MongoDB và Beanie ODM."""
 
+import logging
+
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
 
@@ -15,6 +17,8 @@ from app.models.product import Product
 from app.models.promotion import Promotion
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 
 async def init_db() -> None:
@@ -38,4 +42,4 @@ async def init_db() -> None:
         ],
         allow_index_dropping=settings.BEANIE_ALLOW_INDEX_DROPPING,
     )
-    print(f"[OK] Ket noi MongoDB thanh cong — database: {settings.MONGODB_DB_NAME}")
+    logger.info("mongodb connected database=%s", settings.MONGODB_DB_NAME)

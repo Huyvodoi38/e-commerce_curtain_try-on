@@ -24,6 +24,7 @@ import {
   resolveShippingAdminIds,
 } from '@/lib/vietnam-admin/hooks'
 import { formatVnd } from '@/lib/utils/formatCurrency'
+import { saveBankInstructions } from '@/lib/orders/bankInstructionsStore'
 
 function isBuyNowState(state: unknown): state is CheckoutBuyNowState {
   if (!state || typeof state !== 'object') return false
@@ -169,6 +170,9 @@ export function CheckoutPage() {
           state: { vnpay: result.vnpay },
         })
         return
+      }
+      if (result.bank_instructions) {
+        saveBankInstructions(result.bank_instructions)
       }
       setSuccess(result)
       if (isBuyNow) {

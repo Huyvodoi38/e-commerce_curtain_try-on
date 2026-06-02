@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuthBootstrapState } from '@/app/providers/useAuthBootstrapState'
 import { clearAccessToken, revokeAuthSession, useIsLoggedIn } from '@/lib/auth/tokenStore'
 import { clearSessionHint } from '@/lib/auth/sessionHint'
 import { fetchMe, login, logout, register } from './api'
 
 export function useMeQuery(enabled = true) {
+  const { isBootstrapping } = useAuthBootstrapState()
   const isLoggedIn = useIsLoggedIn()
 
   const query = useQuery({
@@ -14,6 +16,9 @@ export function useMeQuery(enabled = true) {
   })
 
   if (!isLoggedIn) {
+    if (isBootstrapping) {
+      return { ...query, data: undefined, isLoading: true, isError: false, isFetching: true }
+    }
     return { ...query, data: undefined, isLoading: false, isError: false, isFetching: false }
   }
 

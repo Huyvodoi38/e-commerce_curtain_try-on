@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { BankInstructionsCard } from '@/features/orders/components/BankInstructionsCard'
 import { OrderItemsList } from '@/features/orders/components/OrderItemsList'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import type { BankInstructions, OrderDetail } from '@/features/orders/types'
 import { offlineSubtypeLabel } from '@/lib/orders/statusLabels'
 import { formatVnd } from '@/lib/utils/formatCurrency'
+import { saveBankInstructions } from '@/lib/orders/bankInstructionsStore'
 
 type Props = {
   order: OrderDetail
@@ -12,6 +14,12 @@ type Props = {
 }
 
 export function CheckoutSuccessPanel({ order, bankInstructions }: Props) {
+  useEffect(() => {
+    if (bankInstructions) {
+      saveBankInstructions(bankInstructions)
+    }
+  }, [bankInstructions])
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-success-700/20 bg-success-50 p-5">
