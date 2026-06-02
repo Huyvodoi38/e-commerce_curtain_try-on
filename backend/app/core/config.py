@@ -46,8 +46,6 @@ class Settings(BaseSettings):
     VNPAY_TMN_CODE: str = ""
     VNPAY_HASH_SECRET: str = ""
     VNPAY_PAY_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-    # Để trống = để VNPay tự hiển thị phương thức phù hợp merchant.
-    VNPAY_BANK_CODE: str = ""
     VNPAY_EXPIRE_MINUTES: int = 15
     # URL IPN đầy đủ, vd. https://xxxx.ngrok-free.app/payments/vnpay/ipn
     VNPAY_IPN_URL: str = ""
