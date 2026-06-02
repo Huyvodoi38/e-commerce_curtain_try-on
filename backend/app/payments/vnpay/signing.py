@@ -23,7 +23,8 @@ def build_sign_data(params: dict[str, Any]) -> str:
             continue
         if value is None or value == "":
             continue
-        filtered.append((key, str(value)))
+        # VNPay yêu cầu dữ liệu đem ký dùng URL-encoded values.
+        filtered.append((key, _quote_vnp_value(str(value))))
     filtered.sort(key=lambda item: item[0])
     return "&".join(f"{k}={v}" for k, v in filtered)
 
