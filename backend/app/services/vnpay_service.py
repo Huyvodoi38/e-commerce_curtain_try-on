@@ -75,11 +75,15 @@ def build_payment_url(
         "vnp_OrderType": "billpayment",
         "vnp_Locale": "vn",
         "vnp_ReturnUrl": return_url,
+        # Gửi rõ IPN URL để VNPay callback đúng endpoint public của hệ thống.
+        "vnp_IpnUrl": settings.VNPAY_IPN_URL.strip(),
         "vnp_IpAddr": client_ip or "127.0.0.1",
         "vnp_CreateDate": _format_vnpay_datetime(create_at),
         "vnp_ExpireDate": _format_vnpay_datetime(expire_at),
-        "vnp_BankCode": settings.VNPAY_BANK_CODE,
     }
+    bank_code = settings.VNPAY_BANK_CODE.strip()
+    if bank_code:
+        params["vnp_BankCode"] = bank_code
     query = build_payment_query_string(params, settings.VNPAY_HASH_SECRET)
     base = settings.VNPAY_PAY_URL.rstrip("?")
     return f"{base}?{query}"
