@@ -1,5 +1,5 @@
-# Backend API — deploy free tại https://render.com (New > Blueprint)
-# FE deploy riêng trên Vercel — xem docs/DEPLOY_VERCEL.md
+# Backend API — deploy tại https://render.com (New > Blueprint)
+# FE: Vercel — set VITE_API_URL = BACKEND_URL của service này
 
 services:
   - type: web
@@ -13,24 +13,57 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
+
+      # --- Bắt buộc (Blueprint sẽ hỏi khi sync: false) ---
       - key: MONGODB_URL
         sync: false
-      - key: MONGODB_DB_NAME
-        value: Curtain_AI_TryOn
       - key: SECRET_KEY
         generateValue: true
       - key: FRONTEND_URL
         sync: false
       - key: BACKEND_URL
         sync: false
+
+      - key: MONGODB_DB_NAME
+        value: Curtain_AI_TryOn
+      - key: PROJECT_NAME
+        value: Curtain AI TryOn
+      - key: BEANIE_ALLOW_INDEX_DROPPING
+        value: "false"
+
+      # --- JWT (có default trong code, khai báo cho rõ) ---
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+
+      # --- CORS + cookie (FE Vercel ≠ API Render) ---
       - key: CORS_ALLOW_ALL
         value: "false"
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_SAMESITE
-        value: none
-      - key: BEANIE_ALLOW_INDEX_DROPPING
-        value: "false"
+        value: "none"
+
+      # --- Google OAuth (tuỳ chọn — để trống nếu chưa dùng) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+
+      # --- Chuyển khoản offline COD/bank (tuỳ chọn) ---
+      - key: BANK_NAME
+        sync: false
+      - key: BANK_ACCOUNT_NUMBER
+        sync: false
+      - key: BANK_ACCOUNT_HOLDER
+        sync: false
+      - key: BANK_TRANSFER_NOTE_PREFIX
+        value: "Thanh toan don hang"
+
+      # --- VNPay sandbox (tuỳ chọn) ---
       - key: VNPAY_TMN_CODE
         sync: false
       - key: VNPAY_HASH_SECRET
