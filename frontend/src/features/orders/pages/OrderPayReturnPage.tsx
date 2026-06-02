@@ -7,29 +7,53 @@ import { getErrorMessage } from '@/lib/api/client'
 
 const POLL_MS = 3000
 const POLL_MAX_MS = 15 * 60 * 1000
+const VNPAY_SUCCESS_CODE = '00'
+
+const VNPAY_RESPONSE_MESSAGES: Record<string, string> = {
+  '07': 'Giao dịch thành công nhưng bị nghi ngờ rủi ro. Vui lòng liên hệ hỗ trợ để được xác minh.',
+  '09': 'Thẻ/Tài khoản chưa đăng ký Internet Banking.',
+  '10': 'Nhập thông tin thẻ/tài khoản sai quá số lần cho phép.',
+  '11': 'Giao dịch đã hết hạn chờ thanh toán.',
+  '12': 'Thẻ/Tài khoản đang bị khóa.',
+  '13': 'Sai mã OTP xác thực giao dịch.',
+  '24': 'Bạn đã hủy giao dịch thanh toán.',
+  '51': 'Tài khoản không đủ số dư để thanh toán.',
+  '65': 'Tài khoản đã vượt hạn mức giao dịch trong ngày.',
+  '75': 'Ngân hàng thanh toán đang bảo trì.',
+  '79': 'Nhập sai mật khẩu thanh toán quá số lần quy định.',
+  '99': 'Lỗi khác từ cổng thanh toán.',
+}
+
+function getVnpayFailureMessage(code: string | null): string | null {
+  if (!code || code === VNPAY_SUCCESS_CODE) return null
+  return VNPAY_RESPONSE_MESSAGES[code] ?? `Giao dịch không thành công (mã lỗi ${code}).`
+}
 
 export function OrderPayReturnPage() {
   const { id = '' } = useParams()
   const [searchParams] = useSearchParams()
   const vnpResponse = searchParams.get('vnp_ResponseCode')
-  const [polling, setPolling] = useState(true)
+  const vnpFailMessage = getVnpayFailureMessage(vnpResponse)
+  const [deadlineReached, setDeadlineReached] = useState(false)
 
   const orderQuery = useMyOrderDetailQuery(id, true, {
-    refetchInterval: polling ? POLL_MS : false,
+    refetchInterval: (query) => {
+      if (deadlineReached || vnpFailMessage) return false
+      const current = query.state.data
+      if (current?.payment_status === 'paid' || current?.status === 'cancelled') return false
+      return POLL_MS
+    },
   })
 
   const order = orderQuery.data
+  const paid = order?.payment_status === 'paid'
+  const cancelled = order?.status === 'cancelled'
+  const polling = !deadlineReached && !paid && !cancelled && !vnpFailMessage
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setPolling(false), POLL_MAX_MS)
+    const timer = window.setTimeout(() => setDeadlineReached(true), POLL_MAX_MS)
     return () => window.clearTimeout(timer)
   }, [])
-
-  useEffect(() => {
-    if (order?.payment_status === 'paid' || order?.status === 'cancelled') {
-      setPolling(false)
-    }
-  }, [order?.payment_status, order?.status])
 
   if (orderQuery.isLoading && !order) {
     return (
@@ -47,9 +71,6 @@ export function OrderPayReturnPage() {
     )
   }
 
-  const paid = order.payment_status === 'paid'
-  const cancelled = order.status === 'cancelled'
-
   return (
     <PageShell title="Kết quả thanh toán">
       <div className="mx-auto max-w-lg space-y-4 rounded-xl border border-border bg-surface-raised p-6">
@@ -66,18 +87,26 @@ export function OrderPayReturnPage() {
           </p>
         ) : (
           <>
-            <p className="text-center text-foreground-muted">
-              {vnpResponse === '00'
+            <p className={`text-center ${vnpFailMessage ? 'text-danger-700' : 'text-foreground-muted'}`}>
+              {vnpResponse === VNPAY_SUCCESS_CODE
                 ? 'VNPay báo thành công — đang xác nhận với hệ thống…'
-                : 'Đang chờ xác nhận thanh toán từ VNPay…'}
+                : vnpFailMessage ?? 'Đang chờ xác nhận thanh toán từ VNPay…'}
             </p>
             {polling ? (
               <p className="text-center text-xs text-foreground-subtle">Tự động cập nhật mỗi vài giây</p>
             ) : (
-              <p className="text-center text-sm text-warning-700">
-                Chưa nhận được xác nhận. Nếu đã trừ tiền, vui lòng liên hệ hỗ trợ với mã đơn{' '}
-                <span className="font-mono">{order.id}</span>.
-              </p>
+              <>
+                {vnpFailMessage ? (
+                  <p className="text-center text-sm text-foreground-muted">
+                    Vui lòng thử lại phương thức thanh toán khác hoặc tạo lại link thanh toán.
+                  </p>
+                ) : (
+                  <p className="text-center text-sm text-warning-700">
+                    Chưa nhận được xác nhận. Nếu đã trừ tiền, vui lòng liên hệ hỗ trợ với mã đơn{' '}
+                    <span className="font-mono">{order.id}</span>.
+                  </p>
+                )}
+              </>
             )}
           </>
         )}
