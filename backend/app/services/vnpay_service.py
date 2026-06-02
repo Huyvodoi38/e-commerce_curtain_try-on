@@ -29,6 +29,11 @@ from app.services import audit_service
 _VNPAY_SUCCESS_CODE = "00"
 
 
+def _log_ipn(event: str, **fields: object) -> None:
+    payload = " ".join(f"{k}={v}" for k, v in fields.items())
+    print(f"[VNPAY_IPN] event={event} {payload}".strip())
+
+
 def _require_vnpay_config() -> None:
     if not settings.vnpay_enabled:
         raise HTTPException(
@@ -130,11 +135,17 @@ async def create_payment_session(
 async def handle_ipn(query: dict[str, Any]) -> dict[str, str]:
     """Xử lý IPN VNPay — trả RspCode/Message theo spec."""
 
+    txn_ref = str(query.get("vnp_TxnRef", ""))
+    response_code = str(query.get("vnp_ResponseCode", ""))
+    _log_ipn("received", txn_ref=txn_ref or "-", response_code=response_code or "-")
+
     if not settings.vnpay_enabled:
+        _log_ipn("reject_not_configured", txn_ref=txn_ref or "-")
         return {"RspCode": "99", "Message": "VNPay not configured"}
 
     params = {k: v for k, v in query.items() if k.startswith("vnp_")}
     if not verify_secure_hash(params, settings.VNPAY_HASH_SECRET):
+        _log_ipn("reject_invalid_signature", txn_ref=txn_ref or "-")
         return {"RspCode": "97", "Message": "Invalid signature"}
 
     txn_ref = str(params.get("vnp_TxnRef", ""))
@@ -143,37 +154,50 @@ async def handle_ipn(query: dict[str, Any]) -> dict[str, str]:
 
     txn = await PaymentTransaction.find_one(PaymentTransaction.txn_ref == txn_ref)
     if txn is None:
+        _log_ipn("reject_txn_not_found", txn_ref=txn_ref or "-")
         return {"RspCode": "01", "Message": "Order not found"}
 
     order = await Order.get(txn.order_id)
     if order is None:
+        _log_ipn("reject_order_not_found", txn_ref=txn_ref or "-")
         return {"RspCode": "01", "Message": "Order not found"}
 
     try:
         amount_paid = int(params.get("vnp_Amount", 0))
     except (TypeError, ValueError):
+        _log_ipn("reject_amount_parse_failed", txn_ref=txn_ref or "-", amount=params.get("vnp_Amount", "-"))
         return {"RspCode": "04", "Message": "Invalid amount"}
 
     if amount_paid != order.total_amount * 100:
+        _log_ipn(
+            "reject_amount_mismatch",
+            txn_ref=txn_ref or "-",
+            paid=amount_paid,
+            expected=order.total_amount * 100,
+        )
         return {"RspCode": "04", "Message": "Invalid amount"}
 
     if txn.status == PaymentTransactionStatus.SUCCESS:
+        _log_ipn("already_success", txn_ref=txn_ref or "-", txn_no=txn_no or "-")
         return {"RspCode": "00", "Message": "Confirm Success"}
 
     if order.payment_status == PaymentStatus.PAID:
         txn.status = PaymentTransactionStatus.SUCCESS
         txn.vnp_transaction_no = txn_no or txn.vnp_transaction_no
         await txn.save()
+        _log_ipn("order_already_paid", txn_ref=txn_ref or "-", txn_no=txn_no or "-")
         return {"RspCode": "00", "Message": "Confirm Success"}
 
     if order.status == OrderStatus.CANCELLED:
         txn.status = PaymentTransactionStatus.FAILED
         await txn.save()
+        _log_ipn("reject_order_cancelled", txn_ref=txn_ref or "-", txn_no=txn_no or "-")
         return {"RspCode": "02", "Message": "Order cancelled"}
 
     if response_code != _VNPAY_SUCCESS_CODE:
         txn.status = PaymentTransactionStatus.FAILED
         await txn.save()
+        _log_ipn("mark_failed_response_code", txn_ref=txn_ref or "-", response_code=response_code or "-")
         return {"RspCode": "00", "Message": "Confirm Success"}
 
     now = utc_now()
@@ -185,6 +209,7 @@ async def handle_ipn(query: dict[str, Any]) -> dict[str, str]:
     txn.vnp_transaction_no = txn_no
     txn.paid_at = now
     await txn.save()
+    _log_ipn("mark_paid_success", txn_ref=txn_ref or "-", txn_no=txn_no or "-", order_id=order.id)
 
     from app.models.user import User
 
