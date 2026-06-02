@@ -35,25 +35,29 @@ export function OrderPayReturnPage() {
   const vnpResponse = searchParams.get('vnp_ResponseCode')
   const vnpFailMessage = getVnpayFailureMessage(vnpResponse)
   const [deadlineReached, setDeadlineReached] = useState(false)
+  const [stoppedByStatus, setStoppedByStatus] = useState(false)
+  const polling = !deadlineReached && !stoppedByStatus && !vnpFailMessage
 
   const orderQuery = useMyOrderDetailQuery(id, true, {
-    refetchInterval: (query) => {
-      if (deadlineReached || vnpFailMessage) return false
-      const current = query.state.data
-      if (current?.payment_status === 'paid' || current?.status === 'cancelled') return false
-      return POLL_MS
-    },
+    refetchInterval: polling ? POLL_MS : false,
   })
 
   const order = orderQuery.data
   const paid = order?.payment_status === 'paid'
   const cancelled = order?.status === 'cancelled'
-  const polling = !deadlineReached && !paid && !cancelled && !vnpFailMessage
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDeadlineReached(true), POLL_MAX_MS)
     return () => window.clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    if (!order) return
+    if (order.payment_status === 'paid' || order.status === 'cancelled') {
+      const timer = window.setTimeout(() => setStoppedByStatus(true), 0)
+      return () => window.clearTimeout(timer)
+    }
+  }, [order])
 
   if (orderQuery.isLoading && !order) {
     return (
