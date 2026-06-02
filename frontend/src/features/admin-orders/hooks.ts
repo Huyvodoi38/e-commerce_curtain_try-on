@@ -1,0 +1,3 @@
+/** Hooks admin orders */
+
+export {}

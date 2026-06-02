@@ -1,0 +1,57 @@
+# --- Secrets & env (giữ file *.example) ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# --- Tài liệu nội bộ (.md) — giữ README ---
+*.md
+!README.md
+!**/README.md
+
+# --- Backend: script dev/seed & test DB ---
+backend/scripts/
+
+# --- Backend: pytest + mock/fixtures ---
+backend/tests/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# --- Python ---
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+backend/venv/
+backend/dist/
+backend/build/
+.Python
+
+# --- Frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/*.local
+
+# --- Logs & OS ---
+*.log
+logs/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE / Cursor ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.cursor/
+*.swp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# --- Deploy / cache tạm ---
+.vercel/
+*.tsbuildinfo
