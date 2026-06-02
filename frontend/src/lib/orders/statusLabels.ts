@@ -46,7 +46,7 @@ export function offlineSubtypeLabel(subtype: 'cod' | 'bank'): string {
 }
 
 export function paymentMethodLabel(method: 'offline' | 'vnpay', offlineSubtype?: 'cod' | 'bank'): string {
-  if (method === 'vnpay') return 'VNPay QR'
+  if (method === 'vnpay') return 'VNPay'
   return offlineSubtype ? offlineSubtypeLabel(offlineSubtype) : 'Thanh toán offline'
 }
 

@@ -55,7 +55,15 @@ function loadLegacyShippingV1(): SavedShippingV1 | undefined {
 }
 
 function saveShipping(values: CheckoutFormValues) {
-  const { offline_subtype: _pay, promotion_code: _promo, ...address } = values
+  const address = {
+    full_name: values.full_name,
+    phone: values.phone,
+    line1: values.line1,
+    province_id: values.province_id,
+    commune_id: values.commune_id,
+    note: values.note,
+    payment_method: values.payment_method,
+  }
   try {
     localStorage.setItem(SHIPPING_ADDRESS_STORAGE_KEY, JSON.stringify(address))
   } catch {
@@ -244,7 +252,7 @@ export function CheckoutPage() {
                   {...register('payment_method')}
                 />
                 <span>
-                  <span className="block text-sm font-medium">VNPay QR</span>
+                  <span className="block text-sm font-medium">VNPay</span>
                   <span className="text-sm text-foreground-muted">
                     Quét mã trên cổng VNPay (hết hạn sau 15 phút)
                   </span>
