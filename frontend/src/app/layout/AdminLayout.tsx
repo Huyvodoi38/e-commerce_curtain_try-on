@@ -3,6 +3,7 @@ import { useLogoutMutation, useMeQuery } from '@/features/auth/hooks'
 import {
   canManageCustomers,
   canManageOrders,
+  canManagePromotions,
   canManageStaff,
   canViewSystemAuditLogs,
 } from '@/lib/permissions/permissions'
@@ -16,6 +17,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/admin/orders', label: 'Đơn hàng', visible: canManageOrders },
+  { to: '/admin/promotions', label: 'Khuyến mãi', visible: canManagePromotions },
   { to: '/admin/customers', label: 'Khách hàng', visible: canManageCustomers },
   { to: '/admin/staff', label: 'Nhân viên', visible: canManageStaff },
   { to: '/admin/logs', label: 'Nhật ký hệ thống', visible: canViewSystemAuditLogs },

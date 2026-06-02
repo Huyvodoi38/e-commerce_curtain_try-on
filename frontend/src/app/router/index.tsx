@@ -15,6 +15,7 @@ import { OrderPayPage } from '@/features/orders/pages/OrderPayPage'
 import { OrderPayReturnPage } from '@/features/orders/pages/OrderPayReturnPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductListPage } from '@/features/products/pages/ProductListPage'
+import { AdminPromotionsPage } from '@/features/promotions/pages/AdminPromotionsPage'
 import { CustomerLogsPage } from '@/features/users/pages/CustomerLogsPage'
 import { CustomersPage } from '@/features/users/pages/CustomersPage'
 import { StaffPage } from '@/features/users/pages/StaffPage'
@@ -62,6 +63,7 @@ export function AppRouter() {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="promotions" element={<AdminPromotionsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id/logs" element={<CustomerLogsPage />} />
             <Route path="staff" element={<StaffPage />} />

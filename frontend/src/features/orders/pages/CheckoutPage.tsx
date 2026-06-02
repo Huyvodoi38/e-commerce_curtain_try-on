@@ -11,6 +11,7 @@ import { ShippingAddressFields } from '@/features/orders/components/ShippingAddr
 import {
   useCreateBuyNowOrderMutation,
   useCreateOrderFromCartMutation,
+  useValidatePromotionMutation,
 } from '@/features/orders/hooks'
 import {
   checkoutSchema,
@@ -81,8 +82,11 @@ export function CheckoutPage() {
   const cartQuery = useCartQuery(!isBuyNow)
   const createFromCart = useCreateOrderFromCartMutation()
   const createBuyNow = useCreateBuyNowOrderMutation()
+  const validatePromotion = useValidatePromotionMutation()
   const [success, setSuccess] = useState<OrderCreateResponse | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
+  const [promotionFeedback, setPromotionFeedback] = useState<string | null>(null)
+  const [promotionDiscount, setPromotionDiscount] = useState<number>(0)
 
   const saved = useMemo(() => loadSavedShipping() ?? loadLegacyShippingV1(), [])
 
@@ -110,7 +114,9 @@ export function CheckoutPage() {
 
   const paymentMethod = watch('payment_method')
   const offlineSubtype = watch('offline_subtype')
+  const promotionCode = watch('promotion_code')
   const isSubmitting = createFromCart.isPending || createBuyNow.isPending
+  const subtotal = isBuyNow && buyNow ? buyNow.lineTotal : (cartQuery.data?.subtotal ?? 0)
 
   useEffect(() => {
     const legacy = saved as SavedShippingV1 | undefined
@@ -133,6 +139,37 @@ export function CheckoutPage() {
       navigate('/cart', { replace: true })
     }
   }, [isBuyNow, cartQuery.isSuccess, cartQuery.data, success, navigate])
+
+  useEffect(() => {
+    const code = promotionCode?.trim() ?? ''
+    if (!code) {
+      setPromotionFeedback(null)
+      setPromotionDiscount(0)
+      return
+    }
+    if (subtotal <= 0) {
+      setPromotionFeedback(null)
+      setPromotionDiscount(0)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      validatePromotion
+        .mutateAsync({ code, subtotal })
+        .then((res) => {
+          setPromotionDiscount(res.discount_amount)
+          setPromotionFeedback(
+            `Áp dụng ${res.code}: giảm ${formatVnd(res.discount_amount)}, còn ${formatVnd(res.total_after_discount)}`,
+          )
+        })
+        .catch((error) => {
+          setPromotionDiscount(0)
+          setPromotionFeedback(getErrorMessage(error))
+        })
+    }, 550)
+
+    return () => clearTimeout(timer)
+  }, [promotionCode, subtotal, validatePromotion])
 
   async function onSubmit(values: CheckoutFormValues) {
     saveShipping(values)
@@ -335,6 +372,14 @@ export function CheckoutPage() {
                 <p className="mt-4 border-t border-border pt-4 text-lg font-semibold text-brand">
                   Tạm tính: {formatVnd(cart.subtotal)}
                 </p>
+                {promotionDiscount > 0 ? (
+                  <>
+                    <p className="mt-1 text-sm text-success-700">Giảm mã: -{formatVnd(promotionDiscount)}</p>
+                    <p className="mt-1 text-base font-semibold text-brand">
+                      Dự kiến còn: {formatVnd(Math.max(0, cart.subtotal - promotionDiscount))}
+                    </p>
+                  </>
+                ) : null}
                 <p className="mt-1 text-xs text-foreground-subtle">
                   Giảm giá (nếu có) được áp dụng khi đặt hàng.
                 </p>
@@ -369,6 +414,18 @@ export function CheckoutPage() {
           {submitError ? (
             <p className="rounded-lg border border-danger-700/20 bg-danger-50 px-4 py-3 text-sm text-danger-700">
               {getErrorMessage(submitError)}
+            </p>
+          ) : null}
+
+          {promotionFeedback ? (
+            <p
+              className={`rounded-lg border px-4 py-3 text-sm ${
+                promotionDiscount > 0
+                  ? 'border-success-700/20 bg-success-50 text-success-700'
+                  : 'border-danger-700/20 bg-danger-50 text-danger-700'
+              }`}
+            >
+              {promotionFeedback}
             </p>
           ) : null}
 

@@ -24,6 +24,10 @@ export function canManageStaff(role: UserRole): boolean {
   return isManager(role)
 }
 
+export function canManagePromotions(role: UserRole): boolean {
+  return isStaffOrAbove(role)
+}
+
 export function canViewSystemAuditLogs(role: UserRole): boolean {
   return isManager(role)
 }

@@ -14,6 +14,7 @@ import type {
   OrderCreateFromCartBody,
   OrderDetail,
 } from '@/features/orders/types'
+import { validatePromotionCode } from '@/features/promotions/api'
 
 export const myOrdersQueryKey = (params: MyOrdersQueryParams) => ['orders', params] as const
 export const myOrderDetailQueryKey = (id: string) => ['orders', id] as const
@@ -80,5 +81,12 @@ export function useCancelMyOrderMutation(orderId: string) {
       queryClient.setQueryData(myOrderDetailQueryKey(orderId), data)
       invalidateOrderLists(queryClient)
     },
+  })
+}
+
+export function useValidatePromotionMutation() {
+  return useMutation({
+    mutationFn: ({ code, subtotal }: { code: string; subtotal: number }) =>
+      validatePromotionCode(code, subtotal),
   })
 }
