@@ -5,6 +5,7 @@ import {
   canManageOrders,
   canManagePromotions,
   canManageStaff,
+  canViewAdminProducts,
   canViewSystemAuditLogs,
 } from '@/lib/permissions/permissions'
 import type { UserRole } from '@/types/auth'
@@ -17,6 +18,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/admin/orders', label: 'Đơn hàng', visible: canManageOrders },
+  { to: '/admin/products', label: 'Sản phẩm', visible: canViewAdminProducts },
   { to: '/admin/promotions', label: 'Khuyến mãi', visible: canManagePromotions },
   { to: '/admin/customers', label: 'Khách hàng', visible: canManageCustomers },
   { to: '/admin/staff', label: 'Nhân viên', visible: canManageStaff },

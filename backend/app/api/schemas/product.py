@@ -102,6 +102,7 @@ class ProductPublic(BaseModel):
     image_urls: list[str]
     display_image_url: str | None
     ai_texture_url: str | None
+    is_active: bool = True
 
 
 class ProductDetail(ProductPublic):

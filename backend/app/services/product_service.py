@@ -60,6 +60,7 @@ def product_to_public(product: Product) -> ProductPublic:
         image_urls=urls,
         display_image_url=urls[0] if urls else None,
         ai_texture_url=product.ai_texture_url,
+        is_active=product.is_active,
     )
 
 
