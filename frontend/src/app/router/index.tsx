@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/app/layout/AdminLayout'
 import { PublicLayout } from '@/app/layout/PublicLayout'
-import { GuestOnly, RequireAdmin, RequireAuth } from '@/app/router/guards'
+import { GuestOnly, RequireAdmin, RequireAuth, RequireStoreAccess } from '@/app/router/guards'
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
@@ -39,23 +39,26 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="products" element={<ProductListPage />} />
-          <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="auth/callback" element={<AuthCallbackPage />} />
 
-          <Route element={<RequireAuth roles={['customer']} />}>
-            <Route path="cart" element={<CartPage />} />
-            <Route path="checkout" element={<CheckoutPage />} />
-            <Route path="orders" element={<MyOrdersPage />} />
-            <Route path="orders/:id/pay" element={<OrderPayPage />} />
-            <Route path="orders/:id/pay/return" element={<OrderPayReturnPage />} />
-            <Route path="orders/:id" element={<MyOrderDetailPage />} />
-          </Route>
+          <Route element={<RequireStoreAccess />}>
+            <Route index element={<HomePage />} />
+            <Route path="products" element={<ProductListPage />} />
+            <Route path="products/:id" element={<ProductDetailPage />} />
 
-          <Route element={<GuestOnly />}>
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
+            <Route element={<RequireAuth roles={['customer']} />}>
+              <Route path="cart" element={<CartPage />} />
+              <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="orders" element={<MyOrdersPage />} />
+              <Route path="orders/:id/pay" element={<OrderPayPage />} />
+              <Route path="orders/:id/pay/return" element={<OrderPayReturnPage />} />
+              <Route path="orders/:id" element={<MyOrderDetailPage />} />
+            </Route>
+
+            <Route element={<GuestOnly />}>
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+            </Route>
           </Route>
         </Route>
 

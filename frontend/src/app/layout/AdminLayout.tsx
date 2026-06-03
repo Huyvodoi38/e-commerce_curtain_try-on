@@ -61,9 +61,6 @@ export function AdminLayout() {
               )
             })}
         </nav>
-        <Link to="/" className="mt-8 block text-sm text-foreground-subtle hover:text-brand">
-          ← Về cửa hàng
-        </Link>
         <button
           type="button"
           onClick={() => void handleLogout()}

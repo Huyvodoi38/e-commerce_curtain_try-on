@@ -45,7 +45,7 @@ export function AccountMenu({ user }: Props) {
     } catch {
       // Vẫn thoát session local nếu API lỗi
     }
-    window.location.assign('/')
+    window.location.assign(canAccessAdmin(user.role) ? '/login' : '/')
   }
 
   return (

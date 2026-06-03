@@ -1,8 +1,8 @@
 import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { loginPathWithRedirect } from '@/lib/auth/paths'
-import { getPostLoginPath } from '@/lib/auth/redirects'
+import { getDefaultHomePath, getPostLoginPath } from '@/lib/auth/redirects'
 import { useMeQuery } from '@/features/auth/hooks'
-import { canAccessAdmin } from '@/lib/permissions/permissions'
+import { canAccessAdmin, canAccessStore } from '@/lib/permissions/permissions'
 import type { UserRole } from '@/types/auth'
 
 function LoadingScreen() {
@@ -26,7 +26,21 @@ export function RequireAuth({ roles }: { roles?: UserRole[] }) {
       />
     )
   }
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to={getDefaultHomePath(user.role)} replace />
+  }
+
+  return <Outlet />
+}
+
+/** Chỉ khách (customer) và người chưa đăng nhập được vào màn cửa hàng. */
+export function RequireStoreAccess() {
+  const { data: user, isLoading } = useMeQuery()
+
+  if (isLoading) return <LoadingScreen />
+  if (user && !canAccessStore(user.role)) {
+    return <Navigate to={getDefaultHomePath(user.role)} replace />
+  }
 
   return <Outlet />
 }

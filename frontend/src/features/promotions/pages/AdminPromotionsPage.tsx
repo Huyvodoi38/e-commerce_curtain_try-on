@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { FormField, inputClassName } from '@/components/form/FormField'
 import { useMeQuery } from '@/features/auth/hooks'
 import {
   useCreatePromotionMutation,
@@ -154,71 +155,130 @@ export function AdminPromotionsPage() {
           <h2 className="text-base font-semibold">
             {editingId ? `Cập nhật mã khuyến mãi #${editingId.slice(-6)}` : 'Tạo mã khuyến mãi'}
           </h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="Mã (VD: REM10)"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Mô tả"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <select
-              value={discountType}
-              onChange={(e) => setDiscountType(e.target.value as DiscountType)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <FormField label="Mã khuyến mãi" htmlFor="promo-code">
+              <input
+                id="promo-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="VD: REM10"
+                className={inputClassName}
+              />
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Khách nhập mã này khi thanh toán. Tự chuyển thành chữ in hoa.
+              </p>
+            </FormField>
+
+            <FormField label="Mô tả (tuỳ chọn)" htmlFor="promo-desc">
+              <input
+                id="promo-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="VD: Giảm 10% cho đơn từ 500k"
+                className={inputClassName}
+              />
+            </FormField>
+
+            <FormField label="Loại giảm giá" htmlFor="promo-discount-type">
+              <select
+                id="promo-discount-type"
+                value={discountType}
+                onChange={(e) => setDiscountType(e.target.value as DiscountType)}
+                className={inputClassName}
+              >
+                <option value="percentage">Theo phần trăm (%)</option>
+                <option value="fixed">Số tiền cố định (VND)</option>
+              </select>
+            </FormField>
+
+            <FormField
+              label={discountType === 'percentage' ? 'Giá trị giảm (%)' : 'Giá trị giảm (VND)'}
+              htmlFor="promo-discount-value"
             >
-              <option value="percentage">Phần trăm (%)</option>
-              <option value="fixed">Số tiền cố định</option>
-            </select>
-            <input
-              type="number"
-              min={1}
-              value={discountValue}
-              onChange={(e) => setDiscountValue(Number(e.target.value || 0))}
-              placeholder="Giá trị giảm"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              min={0}
-              value={minOrderValue}
-              onChange={(e) => setMinOrderValue(Number(e.target.value || 0))}
-              placeholder="Đơn tối thiểu"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              min={1}
-              value={maxDiscountAmount}
-              onChange={(e) => setMaxDiscountAmount(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="Trần giảm (tuỳ chọn)"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              min={1}
-              value={usageLimit}
-              onChange={(e) => setUsageLimit(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="Giới hạn lượt (tuỳ chọn)"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              type="datetime-local"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
-            <input
-              type="datetime-local"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-            />
+              <input
+                id="promo-discount-value"
+                type="number"
+                min={1}
+                max={discountType === 'percentage' ? 100 : undefined}
+                value={discountValue}
+                onChange={(e) => setDiscountValue(Number(e.target.value || 0))}
+                placeholder={discountType === 'percentage' ? 'VD: 10 (= giảm 10%)' : 'VD: 50000'}
+                className={inputClassName}
+              />
+            </FormField>
+
+            <FormField label="Giá trị đơn tối thiểu (VND)" htmlFor="promo-min-order">
+              <input
+                id="promo-min-order"
+                type="number"
+                min={0}
+                value={minOrderValue}
+                onChange={(e) => setMinOrderValue(Number(e.target.value || 0))}
+                placeholder="0 = không yêu cầu tối thiểu"
+                className={inputClassName}
+              />
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Tổng tiền hàng trước giảm phải đạt mức này mới áp dụng được mã.
+              </p>
+            </FormField>
+
+            <FormField label="Trần giảm tối đa (VND, tuỳ chọn)" htmlFor="promo-max-cap">
+              <input
+                id="promo-max-cap"
+                type="number"
+                min={1}
+                value={maxDiscountAmount}
+                onChange={(e) => setMaxDiscountAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Chỉ dùng khi loại % — để trống nếu không giới hạn"
+                className={inputClassName}
+                disabled={discountType === 'fixed'}
+              />
+              {discountType === 'fixed' ? (
+                <p className="mt-1 text-xs text-foreground-subtle">
+                  Không áp dụng khi giảm theo số tiền cố định.
+                </p>
+              ) : null}
+            </FormField>
+
+            <FormField label="Giới hạn lượt sử dụng (tuỳ chọn)" htmlFor="promo-usage-limit">
+              <input
+                id="promo-usage-limit"
+                type="number"
+                min={1}
+                value={usageLimit}
+                onChange={(e) => setUsageLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Để trống = không giới hạn"
+                className={inputClassName}
+              />
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Tổng số lần toàn hệ thống được dùng mã này.
+              </p>
+            </FormField>
+
+            <div className="hidden md:block" aria-hidden />
+
+            <FormField label="Ngày bắt đầu có hiệu lực" htmlFor="promo-start">
+              <input
+                id="promo-start"
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={inputClassName}
+              />
+            </FormField>
+
+            <FormField label="Ngày hết hạn" htmlFor="promo-end">
+              <input
+                id="promo-end"
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={inputClassName}
+              />
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Sau thời điểm này khách không thể áp dụng mã.
+              </p>
+            </FormField>
           </div>
           {createMutation.isError || patchMutation.isError ? (
             <p className="mt-2 text-sm text-danger-700">

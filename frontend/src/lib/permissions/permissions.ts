@@ -12,6 +12,10 @@ export function canAccessAdmin(role: UserRole): boolean {
   return isStaffOrAbove(role)
 }
 
+export function canAccessStore(role: UserRole): boolean {
+  return role === 'customer'
+}
+
 export function canManageOrders(role: UserRole): boolean {
   return isStaffOrAbove(role)
 }
