@@ -1,4 +1,5 @@
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useUserAuditLogsQuery, useUserDetailQuery } from '@/features/users/hooks'
@@ -10,6 +11,7 @@ export function CustomerLogsPage() {
   const pageSize = 20
   const userQuery = useUserDetailQuery(id, Boolean(id))
   const logsQuery = useUserAuditLogsQuery(id, page, pageSize, Boolean(id))
+  const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)
 
   return (
     <PageShell title="Timeline khách hàng" description="Lịch sử hành động liên quan tới tài khoản">
@@ -41,26 +43,13 @@ export function CustomerLogsPage() {
         </div>
       ) : null}
 
-      {logsQuery.data && logsQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>Trang {page}</span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={logsQuery.data.items.length < pageSize}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {logsQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang nhật ký khách hàng"
+        />
       ) : null}
     </PageShell>
   )

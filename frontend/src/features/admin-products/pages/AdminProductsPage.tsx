@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { FormField, inputClassName } from '@/components/form/FormField'
 import { useMeQuery } from '@/features/auth/hooks'
 import { fetchAdminProductDetail } from '@/features/admin-products/api'
@@ -65,10 +66,11 @@ export function AdminProductsPage() {
   const stockMutation = usePatchProductStockMutation()
   const deactivateMutation = useDeactivateProductMutation()
 
-  const totalPages = useMemo(() => {
-    if (!productsQuery.data) return 1
-    return Math.max(1, productsQuery.data.pages || 1)
-  }, [productsQuery.data])
+  const totalPages = resolveTotalPages(
+    productsQuery.data?.total ?? 0,
+    pageSize,
+    productsQuery.data?.pages,
+  )
 
   function resetForm() {
     setForm(emptyForm)
@@ -489,28 +491,13 @@ export function AdminProductsPage() {
         </div>
       ) : null}
 
-      {productsQuery.data && productsQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>
-            Trang {page}/{totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= totalPages}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {productsQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang sản phẩm"
+        />
       ) : null}
     </PageShell>
   )

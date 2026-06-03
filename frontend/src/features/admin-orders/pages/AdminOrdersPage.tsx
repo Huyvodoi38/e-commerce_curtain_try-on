@@ -1,5 +1,6 @@
 import { PageShell } from '@/components/common/PageShell'
-import { useMemo, useState } from 'react'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
+import { useState } from 'react'
 import {
   useAdminOrdersQuery,
   useConfirmOrderPaymentMutation,
@@ -49,10 +50,7 @@ export function AdminOrdersPage() {
   const confirmMutation = useConfirmOrderPaymentMutation()
   const statusMutation = useUpdateOrderStatusMutation()
 
-  const totalPages = useMemo(() => {
-    if (!ordersQuery.data) return 1
-    return Math.max(1, Math.ceil(ordersQuery.data.total / pageSize))
-  }, [ordersQuery.data])
+  const totalPages = resolveTotalPages(ordersQuery.data?.total ?? 0, pageSize)
 
   async function runStatusAction(nextStatus: OrderStatus, orderId: string, textReason?: string) {
     await statusMutation.mutateAsync({
@@ -175,28 +173,13 @@ export function AdminOrdersPage() {
         </div>
       ) : null}
 
-      {ordersQuery.data && ordersQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>
-            Trang {page}/{totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= totalPages}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {ordersQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang đơn hàng"
+        />
       ) : null}
 
       {modalState ? (

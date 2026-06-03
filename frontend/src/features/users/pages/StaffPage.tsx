@@ -1,4 +1,5 @@
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useMeQuery } from '@/features/auth/hooks'
@@ -11,6 +12,7 @@ export function StaffPage() {
   const [page, setPage] = useState(1)
   const pageSize = 10
   const usersQuery = useUsersQuery({ role: 'staff', page, page_size: pageSize })
+  const totalPages = resolveTotalPages(usersQuery.data?.total ?? 0, pageSize)
 
   if (meQuery.data && !canManageStaff(meQuery.data.role)) {
     return <Navigate to="/admin" replace />
@@ -47,26 +49,13 @@ export function StaffPage() {
         </div>
       ) : null}
 
-      {usersQuery.data && usersQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>Trang {page}</span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={usersQuery.data.items.length < pageSize}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {usersQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang nhân viên"
+        />
       ) : null}
     </PageShell>
   )

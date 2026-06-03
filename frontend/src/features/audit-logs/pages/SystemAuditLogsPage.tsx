@@ -1,4 +1,5 @@
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useMeQuery } from '@/features/auth/hooks'
@@ -18,6 +19,7 @@ export function SystemAuditLogsPage() {
     customer_id: customerId || undefined,
     order_id: orderId || undefined,
   })
+  const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)
 
   if (meQuery.data && !canViewSystemAuditLogs(meQuery.data.role)) {
     return <Navigate to="/admin" replace />
@@ -63,26 +65,13 @@ export function SystemAuditLogsPage() {
         </div>
       ) : null}
 
-      {logsQuery.data && logsQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>Trang {page}</span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={logsQuery.data.items.length < pageSize}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {logsQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang nhật ký hệ thống"
+        />
       ) : null}
     </PageShell>
   )

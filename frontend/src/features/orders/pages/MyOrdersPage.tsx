@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useMyOrdersQuery } from '@/features/orders/hooks'
 import type { OrderStatus } from '@/features/orders/types'
@@ -38,7 +39,7 @@ export function MyOrdersPage() {
   })
 
   const data = ordersQuery.data
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1
+  const totalPages = resolveTotalPages(data?.total ?? 0, pageSize)
 
   return (
     <PageShell title="Đơn hàng của tôi" description="Theo dõi trạng thái đơn và thanh toán">
@@ -112,28 +113,13 @@ export function MyOrdersPage() {
         </ul>
       ) : null}
 
-      {data && data.total > pageSize ? (
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span className="text-sm text-foreground-muted">
-            Trang {page} / {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang đơn hàng"
+        />
       ) : null}
     </PageShell>
   )

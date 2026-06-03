@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { FormField, inputClassName } from '@/components/form/FormField'
 import { useMeQuery } from '@/features/auth/hooks'
 import {
@@ -47,10 +48,11 @@ export function AdminPromotionsPage() {
   const patchMutation = usePatchPromotionMutation()
   const deactivateMutation = useDeactivatePromotionMutation()
 
-  const totalPages = useMemo(() => {
-    if (!promotionsQuery.data) return 1
-    return Math.max(1, promotionsQuery.data.pages || 1)
-  }, [promotionsQuery.data])
+  const totalPages = resolveTotalPages(
+    promotionsQuery.data?.total ?? 0,
+    pageSize,
+    promotionsQuery.data?.pages,
+  )
 
   async function handleCreate() {
     if (!code.trim() || !startDate || !endDate) return
@@ -405,28 +407,13 @@ export function AdminPromotionsPage() {
         </div>
       ) : null}
 
-      {promotionsQuery.data && promotionsQuery.data.total > pageSize ? (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page <= 1}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>
-            Trang {page}/{totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= totalPages}
-            className="rounded border border-border px-3 py-1.5 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
+      {promotionsQuery.data ? (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          ariaLabel="Phân trang khuyến mãi"
+        />
       ) : null}
     </PageShell>
   )
