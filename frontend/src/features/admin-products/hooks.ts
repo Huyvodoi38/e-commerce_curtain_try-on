@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createProduct,
   deactivateProduct,
+  deleteProductPermanent,
   fetchAdminProductDetail,
   fetchAdminProducts,
   patchProduct,
@@ -72,6 +73,16 @@ export function useDeactivateProductMutation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deactivateProduct(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-products'] })
+    },
+  })
+}
+
+export function useDeleteProductPermanentMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteProductPermanent(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin-products'] })
     },

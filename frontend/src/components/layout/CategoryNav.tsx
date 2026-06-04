@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom'
 import type { CategoryTreeNode } from '@/features/categories/types'
 import { useCategoriesTreeQuery, useFeaturedCategoriesQuery } from '@/features/categories/hooks'
-import { categoryProductsPath } from '@/lib/catalog/categories'
-
-const FEATURED_ROW_LIMIT = 8
+import { categoryProductsPath, FEATURED_MENU_LIMIT } from '@/lib/catalog/categories'
 
 export function CategoryNav() {
   const featured = useFeaturedCategoriesQuery()
   const tree = useCategoriesTreeQuery()
 
-  const featuredItems = (featured.data?.items ?? []).slice(0, FEATURED_ROW_LIMIT)
+  const featuredItems = (featured.data?.items ?? []).slice(0, FEATURED_MENU_LIMIT)
   const treeRoots = Array.isArray(tree.data) ? tree.data : []
   const isLoading = featured.isLoading || tree.isLoading
 

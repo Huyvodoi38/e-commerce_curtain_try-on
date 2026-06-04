@@ -11,13 +11,16 @@ from fastapi import HTTPException, status
 from app.api.schemas.product import (
     ProductCreate,
     ProductDetail,
+    ProductListItem,
     ProductListResponse,
     ProductPatch,
     ProductPublic,
     ProductStockPatch,
     ProductUpdate,
 )
+from app.models.cart import Cart
 from app.models.common import utc_now
+from app.models.order import Order
 from app.models.product import Product
 from app.services import category_service
 from app.utils.product_images import normalize_image_urls, resolved_image_urls
@@ -56,22 +59,31 @@ def product_to_public(product: Product) -> ProductPublic:
         effective_price=effective,
         is_on_sale=on_sale,
         stock=product.stock,
-        categories=product.categories,
+        categories=product.categories or [],
         image_urls=urls,
         display_image_url=urls[0] if urls else None,
         ai_texture_url=product.ai_texture_url,
-        is_active=product.is_active,
     )
+
+
+def product_to_list_item(product: Product, *, staff_view: bool = False) -> ProductListItem:
+    """Map sang schema danh sách — chỉ staff/manager mới có is_active."""
+
+    base = product_to_public(product)
+    if staff_view:
+        return ProductListItem(**base.model_dump(), is_active=product.is_active)
+    return ProductListItem(**base.model_dump())
 
 
 def product_to_detail(product: Product) -> ProductDetail:
     """Map sang schema chi tiết (staff/manager)."""
 
     base = product_to_public(product)
+    attrs = product.attributes if isinstance(product.attributes, dict) else {}
     return ProductDetail(
         **base.model_dump(),
         is_active=product.is_active,
-        attributes=product.attributes,
+        attributes=attrs,
         created_at=product.created_at,
         updated_at=product.updated_at,
     )
@@ -112,6 +124,7 @@ async def list_products(
     page: int,
     page_size: int,
     include_inactive: bool,
+    staff_view: bool = False,
     search: str | None,
     category: str | None,
     in_stock_only: bool,
@@ -150,7 +163,7 @@ async def list_products(
     page_items = all_items[start : start + page_size]
 
     return ProductListResponse(
-        items=[product_to_public(p) for p in page_items],
+        items=[product_to_list_item(p, staff_view=staff_view) for p in page_items],
         total=total,
         page=page,
         page_size=page_size,
@@ -272,6 +285,45 @@ async def deactivate_product(product_id: str) -> ProductDetail:
     product.updated_at = utc_now()
     await product.save()
     return product_to_detail(product)
+
+
+async def delete_product_permanent(product_id: str) -> None:
+    """
+    Xóa vĩnh viễn sản phẩm khỏi database.
+
+    Chỉ áp dụng khi SP đã ẩn, chưa xuất hiện trong đơn hàng.
+    """
+
+    product = await _get_product_or_404(product_id)
+    if product.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cần ẩn sản phẩm trước khi xóa vĩnh viễn",
+        )
+
+    oid = product.id
+    order_count = await Order.find({"items.product_id": oid}).count()
+    if order_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể xóa sản phẩm đã có trong đơn hàng",
+        )
+
+    await _remove_product_from_carts(oid)
+    await product.delete()
+
+
+async def _remove_product_from_carts(product_id: PydanticObjectId) -> None:
+    """Gỡ SP khỏi mọi giỏ hàng trước khi xóa document."""
+
+    carts = await Cart.find({"items.product_id": product_id}).to_list()
+    for cart in carts:
+        new_items = [item for item in cart.items if item.product_id != product_id]
+        if len(new_items) == len(cart.items):
+            continue
+        cart.items = new_items
+        cart.updated_at = utc_now()
+        await cart.save()
 
 
 async def _get_product_or_404(product_id: str) -> Product:

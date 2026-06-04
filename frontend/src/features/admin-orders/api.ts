@@ -13,6 +13,11 @@ export async function fetchAdminOrders(
   return data
 }
 
+export async function fetchAdminOrderDetail(orderId: string): Promise<AdminOrderDetail> {
+  const { data } = await apiClient.get<AdminOrderDetail>(`/orders/${orderId}`)
+  return data
+}
+
 export async function confirmOrderPayment(orderId: string): Promise<AdminOrderDetail> {
   const { data } = await apiClient.patch<AdminOrderDetail>(`/orders/${orderId}/payment/confirm`)
   return data
@@ -24,4 +29,8 @@ export async function updateOrderStatus(
 ): Promise<AdminOrderDetail> {
   const { data } = await apiClient.patch<AdminOrderDetail>(`/orders/${orderId}/status`, body)
   return data
+}
+
+export async function deleteOrderPermanent(orderId: string): Promise<void> {
+  await apiClient.delete(`/orders/${orderId}/permanent`)
 }

@@ -5,7 +5,9 @@ import { GuestOnly, RequireAdmin, RequireAuth, RequireStoreAccess } from '@/app/
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { AdminCategoriesPage } from '@/features/admin-categories/pages/AdminCategoriesPage'
 import { AdminProductsPage } from '@/features/admin-products/pages/AdminProductsPage'
+import { AdminOrderDetailPage } from '@/features/admin-orders/pages/AdminOrderDetailPage'
 import { AdminOrdersPage } from '@/features/admin-orders/pages/AdminOrdersPage'
 import { SystemAuditLogsPage } from '@/features/audit-logs/pages/SystemAuditLogsPage'
 import { CartPage } from '@/features/cart/pages/CartPage'
@@ -67,7 +69,9 @@ export function AppRouter() {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboardPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="orders/:id" element={<AdminOrderDetailPage />} />
             <Route path="products" element={<AdminProductsPage />} />
+            <Route path="categories" element={<AdminCategoriesPage />} />
             <Route path="promotions" element={<AdminPromotionsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id/logs" element={<CustomerLogsPage />} />

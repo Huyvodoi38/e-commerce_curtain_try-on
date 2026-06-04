@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from app.api.dependencies import get_current_active_user, require_customer, require_staff
+from app.api.dependencies import get_current_active_user, require_customer, require_manager, require_staff
 from app.api.schemas.order import (
     OrderCreateBuyNow,
     OrderCreateFromCart,
@@ -132,3 +132,13 @@ async def update_order_status(
     """Nhân viên: shipped, delivered, cancelled."""
 
     return await order_service.update_order_status(order_id, data, staff)
+
+
+@router.delete("/{order_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_order_permanent(
+    order_id: str,
+    _: User = Depends(require_manager),
+) -> None:
+    """Xóa vĩnh viễn — chỉ đơn đã hủy, quản lý."""
+
+    await order_service.delete_order_permanent(order_id)

@@ -8,7 +8,7 @@ import { getErrorMessage } from '@/lib/api/client'
 export function CustomerLogsPage() {
   const { id = '' } = useParams()
   const [page, setPage] = useState(1)
-  const pageSize = 20
+  const pageSize = 5
   const userQuery = useUserDetailQuery(id, Boolean(id))
   const logsQuery = useUserAuditLogsQuery(id, page, pageSize, Boolean(id))
   const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)

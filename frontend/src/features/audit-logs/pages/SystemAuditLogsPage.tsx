@@ -12,7 +12,7 @@ export function SystemAuditLogsPage() {
   const [page, setPage] = useState(1)
   const [customerId, setCustomerId] = useState('')
   const [orderId, setOrderId] = useState('')
-  const pageSize = 20
+  const pageSize = 10
   const logsQuery = useSystemAuditLogsQuery({
     page,
     page_size: pageSize,

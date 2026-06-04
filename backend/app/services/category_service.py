@@ -11,6 +11,8 @@ from app.api.schemas.category import (
     CategoryCreate,
     CategoryDetail,
     CategoryListResponse,
+    CategoryManageItem,
+    CategoryManageListResponse,
     CategoryPatch,
     CategoryPublic,
     CategorySlugPatch,
@@ -20,6 +22,9 @@ from app.api.schemas.category import (
 from app.models.category import Category
 from app.models.common import utc_now
 from app.models.product import Product
+from app.utils.slug import slug_from_name
+
+FEATURED_MENU_LIMIT = 8
 
 
 async def list_categories_public(*, featured_only: bool = False) -> CategoryListResponse:
@@ -29,7 +34,7 @@ async def list_categories_public(*, featured_only: bool = False) -> CategoryList
     if featured_only:
         query["is_featured"] = True
 
-    docs = await Category.find(query).sort([("sort_order", 1), ("name", 1)]).to_list()
+    docs = await Category.find(query).sort([("name", 1)]).to_list()
     items = [_to_public(c) for c in docs]
     return CategoryListResponse(items=items, total=len(items))
 
@@ -44,16 +49,25 @@ async def list_categories_tree_public() -> list[CategoryTreeNode]:
 async def list_categories_admin(
     *,
     include_inactive: bool = False,
-) -> CategoryListResponse:
-    """Staff/manager — xem tất cả (kể cả ẩn)."""
+) -> CategoryManageListResponse:
+    """Staff/manager — xem tất cả (kể cả ẩn khi include_inactive)."""
 
     query: dict[str, Any] = {}
     if not include_inactive:
         query["is_active"] = True
 
-    docs = await Category.find(query).sort([("sort_order", 1), ("name", 1)]).to_list()
-    items = [_to_public(c) for c in docs]
-    return CategoryListResponse(items=items, total=len(items))
+    docs = await Category.find(query).sort([("name", 1)]).to_list()
+    items: list[CategoryManageItem] = []
+    for category in docs:
+        count = await count_products_by_slug(category.slug)
+        items.append(
+            CategoryManageItem(
+                **_to_public(category).model_dump(),
+                is_active=category.is_active,
+                product_count=count,
+            )
+        )
+    return CategoryManageListResponse(items=items, total=len(items))
 
 
 async def get_category_by_slug(slug: str, *, admin: bool = False) -> CategoryDetail:
@@ -68,17 +82,13 @@ async def get_category_by_slug(slug: str, *, admin: bool = False) -> CategoryDet
 async def create_category(data: CategoryCreate) -> CategoryDetail:
     """Tạo danh mục — manager."""
 
-    existing = await Category.find_one(Category.slug == data.slug)
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="slug danh mục đã tồn tại",
-        )
-
+    slug = await _unique_slug_from_name(data.name)
     parent_oid = await _resolve_parent_id(data.parent_id)
+    if data.is_featured and data.is_active:
+        await _ensure_featured_capacity(exclude_id=None)
     now = utc_now()
     category = Category(
-        slug=data.slug,
+        slug=slug,
         name=data.name,
         description=data.description,
         parent_id=parent_oid,
@@ -94,9 +104,11 @@ async def create_category(data: CategoryCreate) -> CategoryDetail:
 
 
 async def update_category(category_id: str, data: CategoryUpdate) -> CategoryDetail:
-    """Thay thế metadata (không đổi slug)."""
+    """Thay thế metadata — slug tự đồng bộ theo tên."""
 
     category = await _get_or_404(category_id)
+    if data.is_featured and data.is_active and not (category.is_featured and category.is_active):
+        await _ensure_featured_capacity(exclude_id=category.id)
     category.name = data.name
     category.description = data.description
     category.parent_id = await _resolve_parent_id(data.parent_id, exclude_id=category.id)
@@ -106,6 +118,7 @@ async def update_category(category_id: str, data: CategoryUpdate) -> CategoryDet
     category.image_url = data.image_url
     category.updated_at = utc_now()
     await _validate_no_parent_cycle(category)
+    await _sync_slug_from_name(category)
     await category.save()
     return await _to_detail(category)
 
@@ -117,36 +130,29 @@ async def patch_category(category_id: str, data: CategoryPatch) -> CategoryDetai
     updates = data.model_dump(exclude_unset=True)
     if "parent_id" in updates:
         updates["parent_id"] = await _resolve_parent_id(updates["parent_id"], exclude_id=category.id)
+    will_active = updates.get("is_active", category.is_active)
+    will_featured = updates.get("is_featured", category.is_featured)
+    was_on_menu = category.is_active and category.is_featured
+    will_on_menu = will_active and will_featured
+    if will_on_menu and not was_on_menu:
+        await _ensure_featured_capacity(exclude_id=category.id)
     for key, value in updates.items():
         setattr(category, key, value)
     category.updated_at = utc_now()
     await _validate_no_parent_cycle(category)
+    if "name" in updates:
+        await _sync_slug_from_name(category)
     await category.save()
     return await _to_detail(category)
 
 
 async def patch_category_slug(category_id: str, data: CategorySlugPatch) -> CategoryDetail:
-    """Đổi slug và đồng bộ Product.categories."""
+    """Đổi slug và đồng bộ Product.categories — dùng nội bộ / migration."""
 
     category = await _get_or_404(category_id)
-    new_slug = data.slug
-    if new_slug == category.slug:
-        return await _to_detail(category)
-
-    taken = await Category.find_one(Category.slug == new_slug)
-    if taken:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="slug danh mục đã tồn tại")
-
-    old_slug = category.slug
-    category.slug = new_slug
+    await _set_category_slug(category, data.slug)
     category.updated_at = utc_now()
     await category.save()
-
-    products = await Product.find({"categories": old_slug}).to_list()
-    for product in products:
-        product.categories = [new_slug if s == old_slug else s for s in product.categories]
-        await product.save()
-
     return await _to_detail(category)
 
 
@@ -202,6 +208,62 @@ async def validate_category_slugs(slugs: list[str]) -> list[str]:
 
 async def count_products_by_slug(slug: str) -> int:
     return await Product.find({"categories": slug}).count()
+
+
+async def _unique_slug_from_name(
+    name: str,
+    *,
+    exclude_id: PydanticObjectId | None = None,
+) -> str:
+    base = slug_from_name(name)
+    candidate = base
+    suffix = 2
+    while True:
+        existing = await Category.find_one(Category.slug == candidate)
+        if existing is None or (exclude_id is not None and existing.id == exclude_id):
+            return candidate
+        extra = f" {suffix}"
+        candidate = f"{base[: max(1, 64 - len(extra))]}{extra}"
+        suffix += 1
+
+
+async def _set_category_slug(category: Category, new_slug: str) -> None:
+    new_slug = new_slug.strip().lower()
+    if new_slug == category.slug:
+        return
+
+    taken = await Category.find_one(Category.slug == new_slug)
+    if taken is not None and taken.id != category.id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Danh mục trùng tên")
+
+    old_slug = category.slug
+    category.slug = new_slug
+    if old_slug == new_slug:
+        return
+
+    products = await Product.find({"categories": old_slug}).to_list()
+    for product in products:
+        product.categories = [new_slug if s == old_slug else s for s in product.categories]
+        await product.save()
+
+
+async def _sync_slug_from_name(category: Category) -> None:
+    new_slug = await _unique_slug_from_name(category.name, exclude_id=category.id)
+    await _set_category_slug(category, new_slug)
+
+
+async def _ensure_featured_capacity(*, exclude_id: PydanticObjectId | None) -> None:
+    """Giới hạn danh mục active + is_featured trên menu cửa hàng."""
+
+    query: list[Any] = [Category.is_active == True, Category.is_featured == True]
+    if exclude_id is not None:
+        query.append(Category.id != exclude_id)
+    count = await Category.find(*query).count()
+    if count >= FEATURED_MENU_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Chỉ được chọn tối đa {FEATURED_MENU_LIMIT} danh mục nổi bật đang hiển thị",
+        )
 
 
 def _to_public(category: Category) -> CategoryPublic:

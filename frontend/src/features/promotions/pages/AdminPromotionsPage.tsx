@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { FormField, inputClassName } from '@/components/form/FormField'
 import { useMeQuery } from '@/features/auth/hooks'
@@ -35,6 +36,12 @@ export function AdminPromotionsPage() {
   const [usageLimit, setUsageLimit] = useState<number | ''>('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [confirmAction, setConfirmAction] = useState<
+    | { type: 'create' }
+    | { type: 'update' }
+    | { type: 'hide'; id: string; code: string }
+    | null
+  >(null)
   const pageSize = 10
 
   const canIncludeInactive = Boolean(meQuery.data && isManager(meQuery.data.role))
@@ -78,6 +85,22 @@ export function AdminPromotionsPage() {
     setUsageLimit('')
     setStartDate('')
     setEndDate('')
+  }
+
+  async function submitConfirm() {
+    if (!confirmAction) return
+    try {
+      if (confirmAction.type === 'create') {
+        await handleCreate()
+      } else if (confirmAction.type === 'update') {
+        await handleUpdate()
+      } else {
+        await deactivateMutation.mutateAsync(confirmAction.id)
+      }
+      setConfirmAction(null)
+    } catch {
+      // lỗi hiển thị trong modal
+    }
   }
 
   async function openEdit(id: string) {
@@ -290,7 +313,7 @@ export function AdminPromotionsPage() {
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              onClick={() => void (editingId ? handleUpdate() : handleCreate())}
+              onClick={() => setConfirmAction({ type: editingId ? 'update' : 'create' })}
               disabled={
                 createMutation.isPending ||
                 patchMutation.isPending ||
@@ -300,13 +323,7 @@ export function AdminPromotionsPage() {
               }
               className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-on-brand disabled:opacity-50"
             >
-              {editingId
-                ? patchMutation.isPending
-                  ? 'Đang lưu…'
-                  : 'Lưu thay đổi'
-                : createMutation.isPending
-                  ? 'Đang tạo…'
-                  : 'Tạo mã'}
+              {editingId ? 'Lưu thay đổi' : 'Tạo mã'}
             </button>
             {editingId ? (
               <button
@@ -355,7 +372,10 @@ export function AdminPromotionsPage() {
             </thead>
             <tbody>
               {promotionsQuery.data.items.map((item) => (
-                <tr key={item.id} className="border-t border-border">
+                <tr
+                  key={item.id}
+                  className="border-t border-border transition-colors hover:bg-surface-muted"
+                >
                   <td className="px-4 py-3 font-semibold">{item.code}</td>
                   <td className="px-4 py-3">
                     {item.discount_type === 'percentage'
@@ -391,7 +411,9 @@ export function AdminPromotionsPage() {
                       {isManager(meQuery.data?.role ?? 'customer') && item.is_active ? (
                         <button
                           type="button"
-                          onClick={() => void deactivateMutation.mutateAsync(item.id)}
+                          onClick={() =>
+                            setConfirmAction({ type: 'hide', id: item.id, code: item.code })
+                          }
                           className="rounded border border-danger-700/30 px-2 py-1 text-xs text-danger-700 hover:bg-danger-50"
                           disabled={deactivateMutation.isPending}
                         >
@@ -413,6 +435,55 @@ export function AdminPromotionsPage() {
           totalPages={totalPages}
           onPageChange={setPage}
           ariaLabel="Phân trang khuyến mãi"
+        />
+      ) : null}
+      {confirmAction ? (
+        <ConfirmDialog
+          title={
+            confirmAction.type === 'create'
+              ? 'Tạo mã khuyến mãi'
+              : confirmAction.type === 'update'
+                ? 'Lưu thay đổi mã'
+                : 'Ẩn mã khuyến mãi'
+          }
+          description={
+            confirmAction.type === 'create' ? (
+              <>
+                Tạo mã <span className="font-medium text-foreground">{code.trim()}</span> trên hệ
+                thống?
+              </>
+            ) : confirmAction.type === 'update' ? (
+              <>
+                Lưu thay đổi cho mã{' '}
+                <span className="font-medium text-foreground">{code.trim()}</span>?
+              </>
+            ) : (
+              <>
+                Ẩn mã <span className="font-medium text-foreground">{confirmAction.code}</span>. Khách
+                sẽ không dùng được mã này nữa.
+              </>
+            )
+          }
+          confirmLabel={
+            confirmAction.type === 'create'
+              ? 'Tạo mã'
+              : confirmAction.type === 'update'
+                ? 'Lưu thay đổi'
+                : 'Ẩn mã'
+          }
+          variant={confirmAction.type === 'hide' ? 'danger' : 'brand'}
+          pending={
+            createMutation.isPending || patchMutation.isPending || deactivateMutation.isPending
+          }
+          error={
+            createMutation.isError || patchMutation.isError || deactivateMutation.isError
+              ? getErrorMessage(
+                  createMutation.error ?? patchMutation.error ?? deactivateMutation.error,
+                )
+              : null
+          }
+          onConfirm={() => void submitConfirm()}
+          onCancel={() => setConfirmAction(null)}
         />
       ) : null}
     </PageShell>

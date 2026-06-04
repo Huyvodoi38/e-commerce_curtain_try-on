@@ -32,6 +32,14 @@ export function canManagePromotions(role: UserRole): boolean {
   return isStaffOrAbove(role)
 }
 
+export function canViewAdminCategories(role: UserRole): boolean {
+  return isStaffOrAbove(role)
+}
+
+export function canManageCategories(role: UserRole): boolean {
+  return isManager(role)
+}
+
 export function canViewAdminProducts(role: UserRole): boolean {
   return isStaffOrAbove(role)
 }

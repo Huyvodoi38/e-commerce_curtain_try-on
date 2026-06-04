@@ -19,7 +19,7 @@ from app.services import product_service
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.get("", response_model=ProductListResponse)
+@router.get("", response_model=ProductListResponse, response_model_exclude_none=True)
 async def list_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -51,6 +51,7 @@ async def list_products(
         page=page,
         page_size=page_size,
         include_inactive=include_inactive and staff_view,
+        staff_view=staff_view,
         search=search,
         category=category,
         in_stock_only=in_stock_only,
@@ -127,3 +128,13 @@ async def delete_product(
     """Ẩn sản phẩm (soft delete) — quản lý."""
 
     return await product_service.deactivate_product(product_id)
+
+
+@router.delete("/{product_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product_permanent(
+    product_id: str,
+    _: User = Depends(require_manager),
+) -> None:
+    """Xóa vĩnh viễn — chỉ SP đã ẩn và chưa có trong đơn hàng."""
+
+    await product_service.delete_product_permanent(product_id)

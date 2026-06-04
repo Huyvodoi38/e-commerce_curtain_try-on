@@ -2,7 +2,10 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+from app.utils.slug import slug_from_name
 
 
 def _normalize_slug(value: str) -> str:
@@ -10,7 +13,7 @@ def _normalize_slug(value: str) -> str:
 
 
 class CategoryCreate(BaseModel):
-    slug: str = Field(..., min_length=1, max_length=64)
+    slug: str | None = Field(None, max_length=64)
     name: str = Field(..., min_length=1, max_length=120)
     description: str | None = None
     parent_id: str | None = None
@@ -19,10 +22,13 @@ class CategoryCreate(BaseModel):
     is_active: bool = True
     image_url: str | None = None
 
-    @field_validator("slug")
-    @classmethod
-    def slug_lower(cls, value: str) -> str:
-        return _normalize_slug(value)
+    @model_validator(mode="after")
+    def ensure_slug(self) -> "CategoryCreate":
+        if self.slug is None or not self.slug.strip():
+            self.slug = slug_from_name(self.name)
+        else:
+            self.slug = _normalize_slug(self.slug)
+        return self
 
 
 class CategoryUpdate(BaseModel):
@@ -76,6 +82,18 @@ class CategoryDetail(CategoryPublic):
 
 class CategoryListResponse(BaseModel):
     items: list[CategoryPublic]
+    total: int
+
+
+class CategoryManageItem(CategoryPublic):
+    """Danh mục trong màn quản trị — thêm trạng thái và số SP."""
+
+    is_active: bool
+    product_count: int = 0
+
+
+class CategoryManageListResponse(BaseModel):
+    items: list[CategoryManageItem]
     total: int
 
 

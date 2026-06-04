@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { FormField, inputClassName } from '@/components/form/FormField'
 import { useMeQuery } from '@/features/auth/hooks'
@@ -9,6 +10,7 @@ import {
   useAdminProductsQuery,
   useCreateProductMutation,
   useDeactivateProductMutation,
+  useDeleteProductPermanentMutation,
   usePatchProductMutation,
   usePatchProductStockMutation,
 } from '@/features/admin-products/hooks'
@@ -49,6 +51,13 @@ export function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [stockDrafts, setStockDrafts] = useState<Record<string, number>>({})
+  const [confirmAction, setConfirmAction] = useState<
+    | { type: 'hide' | 'delete' | 'restore'; id: string; name: string }
+    | { type: 'create' }
+    | { type: 'update' }
+    | { type: 'stock'; id: string; name: string; stock: number }
+    | null
+  >(null)
   const pageSize = 10
 
   const role = meQuery.data?.role ?? 'customer'
@@ -65,6 +74,7 @@ export function AdminProductsPage() {
   const patchMutation = usePatchProductMutation()
   const stockMutation = usePatchProductStockMutation()
   const deactivateMutation = useDeactivateProductMutation()
+  const deletePermanentMutation = useDeleteProductPermanentMutation()
 
   const totalPages = resolveTotalPages(
     productsQuery.data?.total ?? 0,
@@ -140,16 +150,39 @@ export function AdminProductsPage() {
     resetForm()
   }
 
-  async function handleStockSave(productId: string) {
-    const stock = stockDrafts[productId]
-    if (stock === undefined || stock < 0) return
-    await stockMutation.mutateAsync({ id: productId, stock })
-    setStockDrafts((prev) => {
-      const next = { ...prev }
-      delete next[productId]
-      return next
-    })
+  async function submitConfirmAction() {
+    if (!confirmAction) return
+    try {
+      if (confirmAction.type === 'create') {
+        await handleCreate()
+      } else if (confirmAction.type === 'update') {
+        await handleUpdate()
+      } else if (confirmAction.type === 'stock') {
+        await stockMutation.mutateAsync({ id: confirmAction.id, stock: confirmAction.stock })
+        setStockDrafts((prev) => {
+          const next = { ...prev }
+          delete next[confirmAction.id]
+          return next
+        })
+      } else if (confirmAction.type === 'hide') {
+        await deactivateMutation.mutateAsync(confirmAction.id)
+      } else if (confirmAction.type === 'delete') {
+        await deletePermanentMutation.mutateAsync(confirmAction.id)
+      } else {
+        await patchMutation.mutateAsync({ id: confirmAction.id, body: { is_active: true } })
+      }
+      setConfirmAction(null)
+    } catch {
+      // Lỗi hiển thị qua mutation.isError bên dưới
+    }
   }
+
+  const confirmPending =
+    createMutation.isPending ||
+    patchMutation.isPending ||
+    stockMutation.isPending ||
+    deactivateMutation.isPending ||
+    deletePermanentMutation.isPending
 
   if (meQuery.data && !canViewAdminProducts(meQuery.data.role)) {
     return <Navigate to="/admin" replace />
@@ -335,7 +368,7 @@ export function AdminProductsPage() {
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              onClick={() => void (editingId ? handleUpdate() : handleCreate())}
+              onClick={() => setConfirmAction({ type: editingId ? 'update' : 'create' })}
               disabled={
                 createMutation.isPending ||
                 patchMutation.isPending ||
@@ -343,13 +376,7 @@ export function AdminProductsPage() {
               }
               className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-on-brand disabled:opacity-50"
             >
-              {editingId
-                ? patchMutation.isPending
-                  ? 'Đang lưu…'
-                  : 'Lưu thay đổi'
-                : createMutation.isPending
-                  ? 'Đang tạo…'
-                  : 'Tạo sản phẩm'}
+              {editingId ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
             </button>
             {editingId ? (
               <button
@@ -368,6 +395,12 @@ export function AdminProductsPage() {
       {productsQuery.isError ? (
         <p className="rounded-lg border border-danger-700/20 bg-danger-50 p-4 text-sm text-danger-700">
           {getErrorMessage(productsQuery.error)}
+        </p>
+      ) : null}
+
+      {deactivateMutation.isError || deletePermanentMutation.isError ? (
+        <p className="mb-4 rounded-lg border border-danger-700/20 bg-danger-50 p-4 text-sm text-danger-700">
+          {getErrorMessage(deactivateMutation.error ?? deletePermanentMutation.error)}
         </p>
       ) : null}
 
@@ -391,7 +424,10 @@ export function AdminProductsPage() {
                 const stockDirty = stockDrafts[item.id] !== undefined && stockDrafts[item.id] !== item.stock
 
                 return (
-                  <tr key={item.id} className="border-t border-border">
+                  <tr
+                    key={item.id}
+                    className="border-t border-border transition-colors hover:bg-surface-muted"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {thumb ? (
@@ -438,7 +474,14 @@ export function AdminProductsPage() {
                           {stockDirty ? (
                             <button
                               type="button"
-                              onClick={() => void handleStockSave(item.id)}
+                              onClick={() =>
+                                setConfirmAction({
+                                  type: 'stock',
+                                  id: item.id,
+                                  name: item.name,
+                                  stock: stockValue,
+                                })
+                              }
                               disabled={stockMutation.isPending}
                               className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted disabled:opacity-50"
                             >
@@ -474,12 +517,35 @@ export function AdminProductsPage() {
                         {canManageProducts(role) && item.is_active ? (
                           <button
                             type="button"
-                            onClick={() => void deactivateMutation.mutateAsync(item.id)}
+                            onClick={() =>
+                              setConfirmAction({ type: 'hide', id: item.id, name: item.name })
+                            }
                             className="rounded border border-danger-700/30 px-2 py-1 text-xs text-danger-700 hover:bg-danger-50"
-                            disabled={deactivateMutation.isPending}
                           >
                             Ẩn SP
                           </button>
+                        ) : null}
+                        {canManageProducts(role) && !item.is_active ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setConfirmAction({ type: 'restore', id: item.id, name: item.name })
+                              }
+                              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
+                            >
+                              Bật lại
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setConfirmAction({ type: 'delete', id: item.id, name: item.name })
+                              }
+                              className="rounded border border-danger-700/30 px-2 py-1 text-xs text-danger-700 hover:bg-danger-50"
+                            >
+                              Xóa vĩnh viễn
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </td>
@@ -497,6 +563,97 @@ export function AdminProductsPage() {
           totalPages={totalPages}
           onPageChange={setPage}
           ariaLabel="Phân trang sản phẩm"
+        />
+      ) : null}
+
+      {confirmAction ? (
+        <ConfirmDialog
+          title={
+            confirmAction.type === 'create'
+              ? 'Tạo sản phẩm mới'
+              : confirmAction.type === 'update'
+                ? 'Lưu thay đổi sản phẩm'
+                : confirmAction.type === 'stock'
+                  ? 'Cập nhật tồn kho'
+                  : confirmAction.type === 'hide'
+                    ? 'Ẩn sản phẩm'
+                    : confirmAction.type === 'delete'
+                      ? 'Xóa vĩnh viễn'
+                      : 'Bật lại sản phẩm'
+          }
+          description={
+            confirmAction.type === 'create' ? (
+              <>
+                Tạo sản phẩm{' '}
+                <span className="font-medium text-foreground">{form.name.trim()}</span> trên cửa
+                hàng?
+              </>
+            ) : confirmAction.type === 'update' ? (
+              <>
+                Lưu thay đổi cho sản phẩm{' '}
+                <span className="font-medium text-foreground">{form.name.trim()}</span>?
+              </>
+            ) : confirmAction.type === 'stock' ? (
+              <>
+                Cập nhật tồn kho <span className="font-medium text-foreground">{confirmAction.name}</span>{' '}
+                thành <span className="font-medium text-foreground">{confirmAction.stock}</span>?
+              </>
+            ) : confirmAction.type === 'hide' ? (
+              <>
+                <span className="font-medium text-foreground">{confirmAction.name}</span> sẽ không
+                hiển thị trên cửa hàng. Bạn có thể bật lại sau.
+              </>
+            ) : confirmAction.type === 'delete' ? (
+              <>
+                Xóa hẳn <span className="font-medium text-foreground">{confirmAction.name}</span>{' '}
+                khỏi hệ thống. Chỉ thực hiện được khi sản phẩm chưa nằm trong đơn hàng nào.
+              </>
+            ) : (
+              <>
+                Hiển thị lại <span className="font-medium text-foreground">{confirmAction.name}</span>{' '}
+                trên cửa hàng?
+              </>
+            )
+          }
+          confirmLabel={
+            confirmAction.type === 'create'
+              ? 'Tạo sản phẩm'
+              : confirmAction.type === 'update'
+                ? 'Lưu thay đổi'
+                : confirmAction.type === 'stock'
+                  ? 'Cập nhật tồn kho'
+                  : confirmAction.type === 'hide'
+                    ? 'Ẩn sản phẩm'
+                    : confirmAction.type === 'delete'
+                      ? 'Xóa vĩnh viễn'
+                      : 'Bật lại'
+          }
+          variant={
+            confirmAction.type === 'restore' ||
+            confirmAction.type === 'create' ||
+            confirmAction.type === 'update' ||
+            confirmAction.type === 'stock'
+              ? 'brand'
+              : 'danger'
+          }
+          pending={confirmPending}
+          error={
+            createMutation.isError ||
+            patchMutation.isError ||
+            stockMutation.isError ||
+            deactivateMutation.isError ||
+            deletePermanentMutation.isError
+              ? getErrorMessage(
+                  createMutation.error ??
+                    patchMutation.error ??
+                    stockMutation.error ??
+                    deletePermanentMutation.error ??
+                    deactivateMutation.error,
+                )
+              : null
+          }
+          onConfirm={() => void submitConfirmAction()}
+          onCancel={() => setConfirmAction(null)}
         />
       ) : null}
     </PageShell>

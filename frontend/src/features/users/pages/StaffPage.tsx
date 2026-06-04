@@ -38,7 +38,10 @@ export function StaffPage() {
             </thead>
             <tbody>
               {usersQuery.data.items.map((user) => (
-                <tr key={user.id} className="border-t border-border">
+                <tr
+                  key={user.id}
+                  className="border-t border-border transition-colors hover:bg-surface-muted"
+                >
                   <td className="px-4 py-3">{user.full_name}</td>
                   <td className="px-4 py-3">{user.username ?? user.email ?? '-'}</td>
                   <td className="px-4 py-3">{user.is_active ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}</td>

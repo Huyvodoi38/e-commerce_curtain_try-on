@@ -102,7 +102,12 @@ class ProductPublic(BaseModel):
     image_urls: list[str]
     display_image_url: str | None
     ai_texture_url: str | None
-    is_active: bool = True
+
+
+class ProductListItem(ProductPublic):
+    """Một dòng danh sách — staff/manager có thêm is_active."""
+
+    is_active: bool | None = None
 
 
 class ProductDetail(ProductPublic):
@@ -117,7 +122,7 @@ class ProductDetail(ProductPublic):
 class ProductListResponse(BaseModel):
     """Danh sách có phân trang."""
 
-    items: list[ProductPublic]
+    items: list[ProductListItem]
     total: int
     page: int
     page_size: int

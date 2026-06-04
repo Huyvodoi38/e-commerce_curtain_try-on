@@ -47,3 +47,7 @@ export async function deactivateProduct(id: string): Promise<AdminProductDetail>
   const { data } = await apiClient.delete<AdminProductDetail>(`/products/${id}`)
   return data
 }
+
+export async function deleteProductPermanent(id: string): Promise<void> {
+  await apiClient.delete(`/products/${id}/permanent`)
+}

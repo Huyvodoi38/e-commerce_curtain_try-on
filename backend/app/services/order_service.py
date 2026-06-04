@@ -553,6 +553,25 @@ def _ensure_can_view_order(order: Order, user: User) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền xem đơn này")
 
 
+async def delete_order_permanent(order_id: str) -> None:
+    """
+    Xóa vĩnh viễn đơn hàng khỏi database.
+
+    Chỉ áp dụng khi đơn đã hủy (cancelled). Nhật ký activity giữ nguyên.
+    """
+
+    order = await _get_order_or_404(order_id)
+    if order.status != OrderStatus.CANCELLED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chỉ xóa vĩnh viễn đơn đã hủy",
+        )
+
+    oid = order.id
+    await PaymentTransaction.find(PaymentTransaction.order_id == oid).delete()
+    await order.delete()
+
+
 async def _get_order_or_404(order_id: str) -> Order:
     oid = _parse_object_id(order_id, detail="Không tìm thấy đơn hàng")
     order = await Order.get(oid)

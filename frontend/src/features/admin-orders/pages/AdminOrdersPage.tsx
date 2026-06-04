@@ -1,21 +1,31 @@
 import { PageShell } from '@/components/common/PageShell'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
+import { Link } from 'react-router-dom'
 import { useState } from 'react'
+import { useMeQuery } from '@/features/auth/hooks'
 import {
   useAdminOrdersQuery,
   useConfirmOrderPaymentMutation,
+  useDeleteOrderPermanentMutation,
   useUpdateOrderStatusMutation,
 } from '@/features/admin-orders/hooks'
 import type { OrderStatus } from '@/features/orders/types'
 import { getErrorMessage } from '@/lib/api/client'
 import { fulfillmentStatusLabel, paymentStatusLabel } from '@/lib/orders/statusLabels'
+import { isManager } from '@/lib/permissions/permissions'
 import { formatVnd } from '@/lib/utils/formatCurrency'
 
 type ModalState =
-  | { type: 'cancel'; orderId: string }
-  | { type: 'ship'; orderId: string }
-  | { type: 'deliver'; orderId: string }
+  | { type: 'cancel'; orderId: string; orderLabel: string }
+  | { type: 'ship'; orderId: string; orderLabel: string }
+  | { type: 'deliver'; orderId: string; orderLabel: string }
+  | { type: 'delete'; orderId: string; orderLabel: string }
+  | { type: 'confirm_payment'; orderId: string; orderLabel: string }
   | null
+
+function orderLabel(id: string): string {
+  return `#${id.slice(-8)}`
+}
 
 const STATUS_FILTERS: { value: '' | OrderStatus; label: string }[] = [
   { value: '', label: 'Tất cả' },
@@ -36,11 +46,14 @@ function formatOrderDate(iso: string): string {
 }
 
 export function AdminOrdersPage() {
+  const meQuery = useMeQuery()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<'' | OrderStatus>('')
   const [modalState, setModalState] = useState<ModalState>(null)
   const [reason, setReason] = useState('')
   const pageSize = 10
+  const role = meQuery.data?.role ?? 'customer'
+  const manager = isManager(role)
 
   const ordersQuery = useAdminOrdersQuery({
     page,
@@ -49,6 +62,7 @@ export function AdminOrdersPage() {
   })
   const confirmMutation = useConfirmOrderPaymentMutation()
   const statusMutation = useUpdateOrderStatusMutation()
+  const deletePermanentMutation = useDeleteOrderPermanentMutation()
 
   const totalPages = resolveTotalPages(ordersQuery.data?.total ?? 0, pageSize)
 
@@ -63,17 +77,32 @@ export function AdminOrdersPage() {
     if (!modalState) return
     const trimmed = reason.trim()
     if (modalState.type === 'cancel' && !trimmed) return
-    if (modalState.type === 'cancel') await runStatusAction('cancelled', modalState.orderId, trimmed)
-    if (modalState.type === 'ship') await runStatusAction('shipped', modalState.orderId)
-    if (modalState.type === 'deliver') await runStatusAction('delivered', modalState.orderId)
-    setModalState(null)
-    setReason('')
+    try {
+      if (modalState.type === 'cancel') {
+        await runStatusAction('cancelled', modalState.orderId, trimmed)
+      } else if (modalState.type === 'ship') {
+        await runStatusAction('shipped', modalState.orderId)
+      } else if (modalState.type === 'deliver') {
+        await runStatusAction('delivered', modalState.orderId)
+      } else if (modalState.type === 'confirm_payment') {
+        await confirmMutation.mutateAsync(modalState.orderId)
+      } else {
+        await deletePermanentMutation.mutateAsync(modalState.orderId)
+      }
+      setModalState(null)
+      setReason('')
+    } catch {
+      // Lỗi hiển thị trong modal
+    }
   }
+
+  const modalPending =
+    statusMutation.isPending || deletePermanentMutation.isPending || confirmMutation.isPending
 
   return (
     <PageShell
       title="Quản lý đơn hàng"
-      description="Confirm payment, ship, deliver, cancel (reason)"
+      description="Xác nhận thanh toán, giao hàng, hủy đơn và xóa vĩnh viễn đơn đã hủy"
     >
       <div className="mb-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((item) => (
@@ -117,7 +146,10 @@ export function AdminOrdersPage() {
             </thead>
             <tbody>
               {ordersQuery.data.items.map((order) => (
-                <tr key={order.id} className="border-t border-border">
+                <tr
+                  key={order.id}
+                  className="border-t border-border transition-colors hover:bg-surface-muted"
+                >
                   <td className="px-4 py-3 font-mono">#{order.id.slice(-8)}</td>
                   <td className="px-4 py-3">
                     {fulfillmentStatusLabel(order.status, order.payment_status)}
@@ -127,12 +159,24 @@ export function AdminOrdersPage() {
                   <td className="px-4 py-3">{formatOrderDate(order.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/admin/orders/${order.id}`}
+                        className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
+                      >
+                        Chi tiết
+                      </Link>
                       {order.payment_status === 'unpaid' ? (
                         <button
                           type="button"
                           className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
                           disabled={confirmMutation.isPending}
-                          onClick={() => void confirmMutation.mutateAsync(order.id)}
+                          onClick={() =>
+                            setModalState({
+                              type: 'confirm_payment',
+                              orderId: order.id,
+                              orderLabel: orderLabel(order.id),
+                            })
+                          }
                         >
                           Xác nhận thanh toán
                         </button>
@@ -141,7 +185,13 @@ export function AdminOrdersPage() {
                         <button
                           type="button"
                           className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
-                          onClick={() => setModalState({ type: 'ship', orderId: order.id })}
+                          onClick={() =>
+                            setModalState({
+                              type: 'ship',
+                              orderId: order.id,
+                              orderLabel: orderLabel(order.id),
+                            })
+                          }
                         >
                           Đánh dấu đang giao
                         </button>
@@ -150,7 +200,13 @@ export function AdminOrdersPage() {
                         <button
                           type="button"
                           className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
-                          onClick={() => setModalState({ type: 'deliver', orderId: order.id })}
+                          onClick={() =>
+                            setModalState({
+                              type: 'deliver',
+                              orderId: order.id,
+                              orderLabel: orderLabel(order.id),
+                            })
+                          }
                         >
                           Đánh dấu đã giao
                         </button>
@@ -159,9 +215,30 @@ export function AdminOrdersPage() {
                         <button
                           type="button"
                           className="rounded border border-danger-700/30 px-2 py-1 text-xs text-danger-700 hover:bg-danger-50"
-                          onClick={() => setModalState({ type: 'cancel', orderId: order.id })}
+                          onClick={() =>
+                            setModalState({
+                              type: 'cancel',
+                              orderId: order.id,
+                              orderLabel: orderLabel(order.id),
+                            })
+                          }
                         >
                           Hủy đơn
+                        </button>
+                      ) : null}
+                      {manager && order.status === 'cancelled' ? (
+                        <button
+                          type="button"
+                          className="rounded border border-danger-700/30 px-2 py-1 text-xs text-danger-700 hover:bg-danger-50"
+                          onClick={() =>
+                            setModalState({
+                              type: 'delete',
+                              orderId: order.id,
+                              orderLabel: orderLabel(order.id),
+                            })
+                          }
+                        >
+                          Xóa vĩnh viễn
                         </button>
                       ) : null}
                     </div>
@@ -184,12 +261,42 @@ export function AdminOrdersPage() {
 
       {modalState ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-surface p-5">
-            <h2 className="text-lg font-semibold text-foreground">Xác nhận thao tác</h2>
-            <p className="mt-1 text-sm text-foreground-muted">
+          <div className="w-full max-w-md rounded-xl bg-surface-raised p-5 shadow-lg">
+            <h2 className="text-lg font-semibold text-foreground">
               {modalState.type === 'cancel'
-                ? 'Hủy đơn bắt buộc nhập lý do.'
-                : 'Bạn có chắc muốn cập nhật trạng thái đơn hàng?'}
+                ? 'Hủy đơn hàng'
+                : modalState.type === 'delete'
+                  ? 'Xóa vĩnh viễn'
+                  : modalState.type === 'confirm_payment'
+                    ? 'Xác nhận thanh toán'
+                    : modalState.type === 'ship'
+                      ? 'Đánh dấu đang giao'
+                      : 'Đánh dấu đã giao'}
+            </h2>
+            <p className="mt-2 text-sm text-foreground-muted">
+              {modalState.type === 'cancel' ? (
+                <>
+                  Hủy đơn <span className="font-medium text-foreground">{modalState.orderLabel}</span>.
+                  Bắt buộc nhập lý do. Sau khi hủy, quản lý có thể xóa vĩnh viễn.
+                </>
+              ) : modalState.type === 'confirm_payment' ? (
+                <>
+                  Xác nhận đơn{' '}
+                  <span className="font-medium text-foreground">{modalState.orderLabel}</span> đã
+                  thanh toán (chuyển khoản / tiền mặt)?
+                </>
+              ) : modalState.type === 'delete' ? (
+                <>
+                  Xóa hẳn đơn{' '}
+                  <span className="font-medium text-foreground">{modalState.orderLabel}</span> khỏi hệ
+                  thống. Thao tác không thể hoàn tác.
+                </>
+              ) : (
+                <>
+                  Cập nhật đơn{' '}
+                  <span className="font-medium text-foreground">{modalState.orderLabel}</span>?
+                </>
+              )}
             </p>
             {modalState.type === 'cancel' ? (
               <textarea
@@ -199,27 +306,47 @@ export function AdminOrdersPage() {
                 placeholder="Nhập lý do hủy đơn"
               />
             ) : null}
-            {statusMutation.isError ? (
-              <p className="mt-2 text-sm text-danger-700">{getErrorMessage(statusMutation.error)}</p>
+            {(statusMutation.isError || deletePermanentMutation.isError || confirmMutation.isError) &&
+            modalState ? (
+              <p className="mt-2 text-sm text-danger-700">
+                {getErrorMessage(
+                  statusMutation.error ?? deletePermanentMutation.error ?? confirmMutation.error,
+                )}
+              </p>
             ) : null}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded border border-border px-3 py-1.5 text-sm"
+                className="rounded-md border border-border px-4 py-2 text-sm disabled:opacity-50"
+                disabled={modalPending}
                 onClick={() => {
                   setModalState(null)
                   setReason('')
                 }}
               >
-                Đóng
+                Hủy
               </button>
               <button
                 type="button"
-                className="rounded bg-brand px-3 py-1.5 text-sm text-on-brand disabled:opacity-50"
+                className={`rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                  modalState.type === 'delete'
+                    ? 'bg-danger-700 hover:opacity-90'
+                    : 'bg-brand hover:bg-brand-hover'
+                }`}
                 onClick={() => void submitModal()}
-                disabled={statusMutation.isPending || (modalState.type === 'cancel' && !reason.trim())}
+                disabled={
+                  modalPending || (modalState.type === 'cancel' && !reason.trim())
+                }
               >
-                {statusMutation.isPending ? 'Đang cập nhật…' : 'Xác nhận'}
+                {modalPending
+                  ? 'Đang xử lý…'
+                  : modalState.type === 'cancel'
+                    ? 'Hủy đơn'
+                    : modalState.type === 'delete'
+                      ? 'Xóa vĩnh viễn'
+                      : modalState.type === 'confirm_payment'
+                        ? 'Xác nhận thanh toán'
+                        : 'Xác nhận'}
               </button>
             </div>
           </div>

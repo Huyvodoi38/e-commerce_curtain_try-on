@@ -13,7 +13,6 @@ export type ProductPublic = {
   image_urls: string[]
   display_image_url: string | null
   ai_texture_url: string | null
-  is_active?: boolean
 }
 
 export type ProductListResponse = {
