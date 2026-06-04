@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchUser, fetchUserAuditLogs, fetchUsers, patchUser } from '@/features/users/api'
-import type { ListUsersParams, UserPatchBody } from '@/features/users/types'
+import {
+  createUser,
+  fetchUser,
+  fetchUserAuditLogs,
+  fetchUsers,
+  patchUser,
+} from '@/features/users/api'
+import type { ListUsersParams, UserCreateBody, UserPatchBody } from '@/features/users/types'
 
 export const usersQueryKey = (params: ListUsersParams) => ['users', params] as const
 export const userDetailQueryKey = (id: string) => ['users', id] as const
@@ -21,6 +27,16 @@ export function useUserDetailQuery(userId: string, enabled = true) {
     queryKey: userDetailQueryKey(userId),
     queryFn: () => fetchUser(userId),
     enabled: enabled && Boolean(userId),
+  })
+}
+
+export function useCreateUserMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UserCreateBody) => createUser(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['users'] })
+    },
   })
 }
 

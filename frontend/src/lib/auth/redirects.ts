@@ -11,10 +11,14 @@ export function sanitizeRedirectPath(value: string | null | undefined): string |
 }
 
 export function getDefaultHomePath(role: UserRole): string {
-  return canAccessAdmin(role) ? '/admin/orders' : '/'
+  return canAccessAdmin(role) ? '/admin' : '/'
 }
 
 export function getPostLoginPath(role: UserRole, redirect?: string | null): string {
-  if (canAccessAdmin(role)) return '/admin/orders'
+  if (canAccessAdmin(role)) {
+    const safe = sanitizeRedirectPath(redirect)
+    if (safe?.startsWith('/admin')) return safe
+    return '/admin'
+  }
   return sanitizeRedirectPath(redirect) ?? '/'
 }

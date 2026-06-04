@@ -164,10 +164,7 @@ export function AdminCategoriesPage() {
   const showForm = showCreate || editingId
 
   return (
-    <PageShell
-      title="Quản lý danh mục"
-      description="Tạo, sửa và ẩn danh mục sản phẩm trên cửa hàng"
-    >
+    <PageShell title="Quản lý danh mục">
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           type="search"

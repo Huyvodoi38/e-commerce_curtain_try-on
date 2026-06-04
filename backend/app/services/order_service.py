@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from beanie import PydanticObjectId
@@ -22,7 +23,7 @@ from app.api.schemas.order import (
 )
 from app.core.config import settings
 from app.core.roles import is_staff_or_above
-from app.models.common import utc_now
+from app.models.common import VN_TZ, utc_now
 from app.models.enums import (
     ActivityAction,
     OfflineSubtype,
@@ -136,13 +137,73 @@ async def cancel_vnpay_expired_order(order: Order, txn: PaymentTransaction) -> N
         )
 
 
+def _apply_order_id_search(query: dict[str, Any], search: str | None) -> dict[str, Any]:
+    """Lọc theo _id đầy đủ hoặc hậu tố hex (4–24 ký tự, ví dụ 8 ký tự cuối mã đơn)."""
+
+    if search is None or not search.strip():
+        return query
+    term = search.strip().lstrip("#")
+    try:
+        return {**query, "_id": PydanticObjectId(term)}
+    except Exception:
+        pass
+    lowered = term.lower()
+    if 4 <= len(lowered) <= 24 and all(c in "0123456789abcdef" for c in lowered):
+        return {
+            **query,
+            "$expr": {
+                "$regexMatch": {
+                    "input": {"$toString": "$_id"},
+                    "regex": f"{lowered}$",
+                    "options": "i",
+                }
+            },
+        }
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Mã đơn không hợp lệ — nhập ObjectId hoặc 4–24 ký tự hex cuối mã",
+    )
+
+
+def _apply_created_at_range(
+    query: dict[str, Any],
+    from_date: date | None,
+    to_date: date | None,
+) -> dict[str, Any]:
+    """Lọc created_at theo ngày lịch (Asia/Ho_Chi_Minh)."""
+
+    if from_date is None and to_date is None:
+        return query
+    if from_date is not None and to_date is not None and from_date > to_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ngày bắt đầu phải trước hoặc bằng ngày kết thúc",
+        )
+
+    created: dict[str, Any] = {}
+    if from_date is not None:
+        start = datetime.combine(from_date, time.min, tzinfo=VN_TZ).astimezone(timezone.utc)
+        created["$gte"] = start
+    if to_date is not None:
+        # Cuối ngày "đến" = đầu ngày kế tiếp (exclusive), tránh lệch microsecond.
+        end_exclusive = datetime.combine(
+            to_date + timedelta(days=1), time.min, tzinfo=VN_TZ
+        ).astimezone(timezone.utc)
+        created["$lt"] = end_exclusive
+    return {**query, "created_at": created}
+
+
 async def list_orders(
     *,
     current_user: User,
     page: int,
     page_size: int,
     status_filter: OrderStatus | None = None,
+    payment_status_filter: PaymentStatus | None = None,
     user_id: str | None = None,
+    search: str | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
 ) -> OrderListResponse:
     """Customer: đơn của mình. Staff+: có thể lọc user_id."""
 
@@ -155,6 +216,11 @@ async def list_orders(
 
     if status_filter is not None:
         query["status"] = status_filter
+    if payment_status_filter is not None:
+        query["payment_status"] = payment_status_filter
+
+    query = _apply_order_id_search(query, search)
+    query = _apply_created_at_range(query, from_date, to_date)
 
     skip = (page - 1) * page_size
     total = await Order.find(query).count()
@@ -233,7 +299,11 @@ async def confirm_order_payment(order_id: str, actor: User) -> OrderDetail:
         action=ActivityAction.ORDER_PAYMENT_CONFIRMED,
         customer_id=order.user_id,
         order_id=order.id,
-        metadata={"order_id": str(order.id), "total_amount": order.total_amount},
+        metadata=audit_service.staff_metadata(
+            actor,
+            order_id=str(order.id),
+            total_amount=order.total_amount,
+        ),
     )
     return await _order_to_detail(order)
 
@@ -264,11 +334,12 @@ async def update_order_status(order_id: str, data: OrderStatusUpdate, actor: Use
             action=ActivityAction.ORDER_CANCELLED_BY_STAFF,
             customer_id=order.user_id,
             order_id=order.id,
-            metadata={
-                "order_id": str(order.id),
-                "reason": data.reason,
-                "total_amount": order.total_amount,
-            },
+            metadata=audit_service.staff_metadata(
+                actor,
+                order_id=str(order.id),
+                reason=data.reason,
+                total_amount=order.total_amount,
+            ),
         )
         return detail
 
@@ -305,7 +376,7 @@ async def update_order_status(order_id: str, data: OrderStatusUpdate, actor: Use
             action=log_action,
             customer_id=order.user_id,
             order_id=order.id,
-            metadata={"order_id": str(order.id)},
+            metadata=audit_service.staff_metadata(actor, order_id=str(order.id)),
         )
 
     return await _order_to_detail(order)

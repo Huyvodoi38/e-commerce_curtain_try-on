@@ -117,6 +117,7 @@ async def create_user(actor: User, data: UserCreate) -> UserPublic:
         metadata={
             "role": data.role.value,
             "username": data.username,
+            "staff_id": str(user.id),
             "target_label": audit_service.user_label(user),
         },
     )
@@ -180,11 +181,11 @@ async def patch_user_admin(user_id: str, actor: User, data: UserAdminPatch) -> U
                 action=ActivityAction.USER_DEACTIVATED,
                 customer_id=target.id if target.role == UserRole.CUSTOMER else None,
                 target_user_id=target.id,
-                metadata={
-                    "reason": reason,
-                    "changes": changes,
-                    "target_label": audit_service.user_label(target),
-                },
+                metadata=_staff_target_metadata(
+                    target,
+                    reason=reason,
+                    changes=changes,
+                ),
             )
         else:
             await audit_service.log_activity(
@@ -192,11 +193,11 @@ async def patch_user_admin(user_id: str, actor: User, data: UserAdminPatch) -> U
                 action=ActivityAction.USER_ACTIVATED,
                 customer_id=target.id if target.role == UserRole.CUSTOMER else None,
                 target_user_id=target.id,
-                metadata={
-                    "reason": reason,
-                    "changes": changes,
-                    "target_label": audit_service.user_label(target),
-                },
+                metadata=_staff_target_metadata(
+                    target,
+                    reason=reason,
+                    changes=changes,
+                ),
             )
 
     if changes and not status_logged:
@@ -204,6 +205,16 @@ async def patch_user_admin(user_id: str, actor: User, data: UserAdminPatch) -> U
 
     await target.save()
     return user_to_public(target)
+
+
+def _staff_target_metadata(target: User, **extra: Any) -> dict[str, Any]:
+    meta: dict[str, Any] = {
+        **extra,
+        "target_label": audit_service.user_label(target),
+    }
+    if target.role == UserRole.STAFF:
+        meta["staff_id"] = str(target.id)
+    return meta
 
 
 async def _log_user_updated(
@@ -214,6 +225,8 @@ async def _log_user_updated(
     reason: str | None,
 ) -> None:
     meta: dict[str, Any] = {"changes": changes, "target_label": audit_service.user_label(target)}
+    if target.role == UserRole.STAFF:
+        meta["staff_id"] = str(target.id)
     if reason:
         meta["reason"] = reason
     await audit_service.log_activity(

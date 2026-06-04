@@ -22,6 +22,13 @@ export type UserPatchBody = {
   reason?: string
 }
 
+export type UserCreateBody = {
+  role: 'staff'
+  username: string
+  password: string
+  full_name: string
+}
+
 export type ActivityAction =
   | 'user.registered'
   | 'user.registered_google'

@@ -1,12 +1,19 @@
 import { PageShell } from '@/components/common/PageShell'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import {
+  resolveCustomerLogsBack,
+  type CustomerLogsNavState,
+} from '@/features/users/customerLogsNav'
 import { useUserAuditLogsQuery, useUserDetailQuery } from '@/features/users/hooks'
 import { getErrorMessage } from '@/lib/api/client'
 
 export function CustomerLogsPage() {
   const { id = '' } = useParams()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const back = resolveCustomerLogsBack(location.state as CustomerLogsNavState | null, searchParams)
   const [page, setPage] = useState(1)
   const pageSize = 5
   const userQuery = useUserDetailQuery(id, Boolean(id))
@@ -14,7 +21,11 @@ export function CustomerLogsPage() {
   const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)
 
   return (
-    <PageShell title="Timeline khách hàng" description="Lịch sử hành động liên quan tới tài khoản">
+    <PageShell title="Timeline khách hàng">
+      <Link to={back.to} className="mb-4 inline-block text-sm text-brand hover:underline">
+        ← {back.label}
+      </Link>
+
       {userQuery.data ? (
         <div className="mb-4 rounded-lg border border-border bg-surface-raised p-4 text-sm">
           <p className="font-semibold">{userQuery.data.full_name}</p>

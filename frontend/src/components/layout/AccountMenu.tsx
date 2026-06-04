@@ -69,7 +69,7 @@ export function AccountMenu({ user }: Props) {
           className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-border bg-surface-raised py-1 shadow-lg"
         >
           {isAdmin ? (
-            <AccountMenuLink to="/admin/orders" onNavigate={() => setOpen(false)}>
+            <AccountMenuLink to="/admin" onNavigate={() => setOpen(false)}>
               Quản trị
             </AccountMenuLink>
           ) : (

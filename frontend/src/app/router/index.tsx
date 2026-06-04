@@ -5,6 +5,8 @@ import { GuestOnly, RequireAdmin, RequireAuth, RequireStoreAccess } from '@/app/
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { AdminHomePage } from '@/features/admin-home/pages/AdminHomePage'
+import { AdminStatsPage } from '@/features/admin-stats/pages/AdminStatsPage'
 import { AdminCategoriesPage } from '@/features/admin-categories/pages/AdminCategoriesPage'
 import { AdminProductsPage } from '@/features/admin-products/pages/AdminProductsPage'
 import { AdminOrderDetailPage } from '@/features/admin-orders/pages/AdminOrderDetailPage'
@@ -21,6 +23,7 @@ import { ProductListPage } from '@/features/products/pages/ProductListPage'
 import { AdminPromotionsPage } from '@/features/promotions/pages/AdminPromotionsPage'
 import { CustomerLogsPage } from '@/features/users/pages/CustomerLogsPage'
 import { CustomersPage } from '@/features/users/pages/CustomersPage'
+import { StaffLogsPage } from '@/features/users/pages/StaffLogsPage'
 import { StaffPage } from '@/features/users/pages/StaffPage'
 import { PageShell } from '@/components/common/PageShell'
 
@@ -31,10 +34,6 @@ function HomePage() {
       description="Frontend scaffold — bắt đầu từ Sprint: Auth → Products → Cart → Checkout"
     />
   )
-}
-
-function AdminDashboardPage() {
-  return <PageShell title="Bảng điều khiển" description="Chọn mục từ menu bên trái" />
 }
 
 export function AppRouter() {
@@ -67,7 +66,8 @@ export function AppRouter() {
 
         <Route path="admin" element={<RequireAdmin />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<AdminDashboardPage />} />
+            <Route index element={<AdminHomePage />} />
+            <Route path="stats" element={<AdminStatsPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="orders/:id" element={<AdminOrderDetailPage />} />
             <Route path="products" element={<AdminProductsPage />} />
@@ -76,6 +76,7 @@ export function AppRouter() {
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id/logs" element={<CustomerLogsPage />} />
             <Route path="staff" element={<StaffPage />} />
+            <Route path="staff/:id/logs" element={<StaffLogsPage />} />
             <Route path="logs" element={<SystemAuditLogsPage />} />
           </Route>
         </Route>

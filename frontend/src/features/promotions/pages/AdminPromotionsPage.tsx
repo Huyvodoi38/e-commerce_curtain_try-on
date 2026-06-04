@@ -155,7 +155,7 @@ export function AdminPromotionsPage() {
   }
 
   return (
-    <PageShell title="Quản lý khuyến mãi" description="Danh sách, tạo mới, và ẩn mã khuyến mãi">
+    <PageShell title="Quản lý khuyến mãi">
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           type="search"

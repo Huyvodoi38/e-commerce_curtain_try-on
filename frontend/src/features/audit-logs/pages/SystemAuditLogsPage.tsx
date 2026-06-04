@@ -12,12 +12,14 @@ export function SystemAuditLogsPage() {
   const [page, setPage] = useState(1)
   const [customerId, setCustomerId] = useState('')
   const [orderId, setOrderId] = useState('')
-  const pageSize = 10
+  const [staffId, setStaffId] = useState('')
+  const pageSize = 5
   const logsQuery = useSystemAuditLogsQuery({
     page,
     page_size: pageSize,
     customer_id: customerId || undefined,
     order_id: orderId || undefined,
+    actor_id: staffId || undefined,
   })
   const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)
 
@@ -26,8 +28,8 @@ export function SystemAuditLogsPage() {
   }
 
   return (
-    <PageShell title="Nhật ký hệ thống" description="Manager only — theo dõi tất cả activity logs">
-      <div className="mb-4 grid gap-2 sm:grid-cols-2">
+    <PageShell title="Nhật ký hệ thống">
+      <div className="mb-4 grid gap-2 sm:grid-cols-3">
         <input
           value={customerId}
           onChange={(e) => setCustomerId(e.target.value)}
@@ -38,6 +40,12 @@ export function SystemAuditLogsPage() {
           value={orderId}
           onChange={(e) => setOrderId(e.target.value)}
           placeholder="Lọc theo order_id"
+          className="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
+        />
+        <input
+          value={staffId}
+          onChange={(e) => setStaffId(e.target.value)}
+          placeholder="Lọc theo mã nhân viên (actor_id)"
           className="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
         />
       </div>
@@ -57,8 +65,13 @@ export function SystemAuditLogsPage() {
               <p className="mt-1 text-foreground-muted">
                 {new Date(log.created_at).toLocaleString('vi-VN')} · {log.actor_name} ({log.actor_role})
               </p>
-              <p className="mt-1 text-foreground-subtle">
-                customer={log.customer_id ?? '-'} · order={log.order_id ?? '-'}
+              <p className="mt-1 font-mono text-xs text-foreground-subtle">
+                log={log.id}
+                {typeof log.metadata.staff_id === 'string'
+                  ? ` · staff=${log.metadata.staff_id}`
+                  : ''}
+                {' · actor='}
+                {log.actor_id} · customer={log.customer_id ?? '-'} · order={log.order_id ?? '-'}
               </p>
             </article>
           ))}

@@ -8,6 +8,7 @@ import {
   useDeleteOrderPermanentMutation,
   useUpdateOrderStatusMutation,
 } from '@/features/admin-orders/hooks'
+import { OrderCustomerPanel } from '@/features/admin-orders/components/OrderCustomerPanel'
 import { OrderItemsList } from '@/features/orders/components/OrderItemsList'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import type { OrderStatus } from '@/features/orders/types'
@@ -103,7 +104,7 @@ export function AdminOrderDetailPage() {
   const addr = order.shipping_address
 
   return (
-    <PageShell title={`Đơn ${label}`} description={formatOrderDate(order.created_at)}>
+    <PageShell title={`Đơn ${label}`}>
       <nav className="mb-4 text-sm">
         <Link to="/admin/orders" className="text-brand hover:underline">
           ← Quản lý đơn hàng
@@ -114,16 +115,11 @@ export function AdminOrderDetailPage() {
         <OrderStatusBadge status={order.status} paymentStatus={order.payment_status} />
       </div>
 
-      <section className="mb-4 rounded-xl border border-border bg-surface-raised p-4 text-sm">
-        <h2 className="font-semibold text-foreground">Khách hàng</h2>
-        <p className="mt-2 font-mono text-xs text-foreground-subtle">{order.user_id}</p>
-        <Link
-          to={`/admin/customers/${order.user_id}/logs`}
-          className="mt-2 inline-block text-brand hover:underline"
-        >
-          Xem nhật ký khách hàng
-        </Link>
-      </section>
+      <OrderCustomerPanel
+        userId={order.user_id}
+        orderId={order.id}
+        shippingAddress={addr}
+      />
 
       <section className="mb-4 rounded-xl border border-border bg-surface-raised p-5">
         <h2 className="font-semibold text-foreground">Sản phẩm</h2>
@@ -154,10 +150,6 @@ export function AdminOrderDetailPage() {
           {paymentMethodLabel(order.payment_method, order.offline_subtype)}
         </p>
         <address className="mt-4 not-italic text-foreground-muted">
-          <span className="font-medium text-foreground">{addr.full_name}</span>
-          <br />
-          {addr.phone}
-          <br />
           {formatShippingAddress(addr)}
           {addr.note ? (
             <>
@@ -174,7 +166,7 @@ export function AdminOrderDetailPage() {
         <p className="mt-2 font-mono text-xs text-foreground-subtle">Mã đơn đầy đủ: {order.id}</p>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface-muted/50 p-4">
+      <section className="rounded-xl border border-border bg-surface-raised p-4">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Thao tác</h2>
         <div className="flex flex-wrap gap-2">
           {order.payment_status === 'unpaid' ? (

@@ -1,6 +1,7 @@
 import { PageShell } from '@/components/common/PageShell'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { Link } from 'react-router-dom'
+import { customerLogsPath } from '@/features/users/customerLogsNav'
 import { useState } from 'react'
 import { usePatchUserMutation, useUsersQuery } from '@/features/users/hooks'
 import { getErrorMessage } from '@/lib/api/client'
@@ -44,13 +45,13 @@ export function CustomersPage() {
   }
 
   return (
-    <PageShell title="Khách hàng" description="Quản lý tài khoản customer, xem timeline hoạt động">
+    <PageShell title="Khách hàng">
       <div className="mb-4 flex gap-2">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Tìm theo tên, username, email"
+          placeholder="Tìm theo tên, tên đăng nhập, email"
           className="w-full max-w-md rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
         />
         <button
@@ -75,7 +76,7 @@ export function CustomersPage() {
             <thead className="bg-surface-muted text-foreground-muted">
               <tr>
                 <th className="px-4 py-3">Họ tên</th>
-                <th className="px-4 py-3">Đăng nhập</th>
+                <th className="px-4 py-3">Tên đăng nhập</th>
                 <th className="px-4 py-3">Vai trò</th>
                 <th className="px-4 py-3">Trạng thái</th>
                 <th className="px-4 py-3">Hành động</th>
@@ -100,7 +101,7 @@ export function CustomersPage() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Link
-                        to={`/admin/customers/${user.id}/logs`}
+                        to={customerLogsPath(user.id, { from: 'customers' })}
                         className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-muted"
                       >
                         Xem timeline

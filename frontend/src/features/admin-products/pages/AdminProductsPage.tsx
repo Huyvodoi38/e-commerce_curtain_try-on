@@ -212,10 +212,7 @@ export function AdminProductsPage() {
   const showForm = showCreate || editingId
 
   return (
-    <PageShell
-      title="Quản lý sản phẩm"
-      description="Danh sách, tạo/sửa sản phẩm (quản lý) và cập nhật tồn kho (nhân viên)"
-    >
+    <PageShell title="Quản lý sản phẩm">
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           type="search"

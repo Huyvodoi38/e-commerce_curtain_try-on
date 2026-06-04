@@ -15,6 +15,15 @@ from app.models.enums import ActivityAction, UserRole
 from app.models.user import User
 
 
+def staff_metadata(actor: User, **fields: Any) -> dict[str, Any]:
+    """Metadata bổ sung staff_id khi người thực hiện là nhân viên."""
+
+    meta = dict(fields)
+    if actor.role == UserRole.STAFF:
+        meta["staff_id"] = str(actor.id)
+    return meta
+
+
 def user_label(user: User) -> str:
     """Nhãn hiển thị trên log."""
 
@@ -134,12 +143,21 @@ async def list_logs_for_user(
 
     oid = target.id
     if is_manager(current_user):
-        query: dict[str, Any] = {
-            "$or": [
-                {"customer_id": oid},
-                {"target_user_id": oid},
-            ]
-        }
+        if target.role == UserRole.STAFF:
+            # Log liên quan tài khoản staff + thao tác staff thực hiện (đơn hàng, …)
+            query = {
+                "$or": [
+                    {"target_user_id": oid},
+                    {"actor_id": oid},
+                ]
+            }
+        else:
+            query = {
+                "$or": [
+                    {"customer_id": oid},
+                    {"target_user_id": oid},
+                ]
+            }
     else:
         if target.role != UserRole.CUSTOMER:
             raise HTTPException(

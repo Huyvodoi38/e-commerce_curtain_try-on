@@ -9,7 +9,7 @@ import {
   useDeleteOrderPermanentMutation,
   useUpdateOrderStatusMutation,
 } from '@/features/admin-orders/hooks'
-import type { OrderStatus } from '@/features/orders/types'
+import type { OrderStatus, PaymentStatus } from '@/features/orders/types'
 import { getErrorMessage } from '@/lib/api/client'
 import { fulfillmentStatusLabel, paymentStatusLabel } from '@/lib/orders/statusLabels'
 import { isManager } from '@/lib/permissions/permissions'
@@ -35,6 +35,12 @@ const STATUS_FILTERS: { value: '' | OrderStatus; label: string }[] = [
   { value: 'cancelled', label: 'Đã hủy' },
 ]
 
+const PAYMENT_STATUS_FILTERS: { value: '' | PaymentStatus; label: string }[] = [
+  { value: '', label: 'Tất cả' },
+  { value: 'unpaid', label: 'Chưa thanh toán' },
+  { value: 'paid', label: 'Đã thanh toán' },
+]
+
 function formatOrderDate(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', {
     day: '2-digit',
@@ -49,17 +55,34 @@ export function AdminOrdersPage() {
   const meQuery = useMeQuery()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<'' | OrderStatus>('')
+  const [paymentStatus, setPaymentStatus] = useState<'' | PaymentStatus>('')
+  const [orderSearchDraft, setOrderSearchDraft] = useState('')
+  const [orderSearchApplied, setOrderSearchApplied] = useState('')
+  const [userIdDraft, setUserIdDraft] = useState('')
+  const [userIdApplied, setUserIdApplied] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [modalState, setModalState] = useState<ModalState>(null)
   const [reason, setReason] = useState('')
   const pageSize = 10
   const role = meQuery.data?.role ?? 'customer'
   const manager = isManager(role)
 
-  const ordersQuery = useAdminOrdersQuery({
-    page,
-    page_size: pageSize,
-    status: status || undefined,
-  })
+  const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo)
+
+  const ordersQuery = useAdminOrdersQuery(
+    {
+      page,
+      page_size: pageSize,
+      status: status || undefined,
+      payment_status: paymentStatus || undefined,
+      user_id: userIdApplied.trim() || undefined,
+      search: orderSearchApplied.trim() || undefined,
+      from: !dateRangeInvalid && dateFrom ? dateFrom : undefined,
+      to: !dateRangeInvalid && dateTo ? dateTo : undefined,
+    },
+    !dateRangeInvalid,
+  )
   const confirmMutation = useConfirmOrderPaymentMutation()
   const statusMutation = useUpdateOrderStatusMutation()
   const deletePermanentMutation = useDeleteOrderPermanentMutation()
@@ -99,30 +122,160 @@ export function AdminOrdersPage() {
   const modalPending =
     statusMutation.isPending || deletePermanentMutation.isPending || confirmMutation.isPending
 
+  function applyTextFilters() {
+    setOrderSearchApplied(orderSearchDraft.trim())
+    setUserIdApplied(userIdDraft.trim())
+    setPage(1)
+  }
+
+  function onDateFromChange(value: string) {
+    setDateFrom(value)
+    if (dateTo && value && value > dateTo) setDateTo(value)
+    setPage(1)
+  }
+
+  function onDateToChange(value: string) {
+    setDateTo(value)
+    setPage(1)
+  }
+
+  function resetFilters() {
+    setStatus('')
+    setPaymentStatus('')
+    setOrderSearchDraft('')
+    setOrderSearchApplied('')
+    setUserIdDraft('')
+    setUserIdApplied('')
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+  }
+
+  const hasActiveFilters =
+    Boolean(status) ||
+    Boolean(paymentStatus) ||
+    Boolean(orderSearchApplied) ||
+    Boolean(userIdApplied) ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo)
+
   return (
-    <PageShell
-      title="Quản lý đơn hàng"
-      description="Xác nhận thanh toán, giao hàng, hủy đơn và xóa vĩnh viễn đơn đã hủy"
-    >
-      <div className="mb-4 flex flex-wrap gap-2">
-        {STATUS_FILTERS.map((item) => (
-          <button
-            key={item.value || 'all'}
-            type="button"
-            onClick={() => {
-              setStatus(item.value)
-              setPage(1)
+    <PageShell title="Quản lý đơn hàng">
+      <div className="mb-4 space-y-3 rounded-xl border border-border bg-surface-raised p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-foreground-muted">Giao hàng:</span>
+          {STATUS_FILTERS.map((item) => (
+            <button
+              key={item.value || 'all'}
+              type="button"
+              onClick={() => {
+                setStatus(item.value)
+                setPage(1)
+              }}
+              className={`rounded-full px-3 py-1.5 text-sm ${
+                status === item.value
+                  ? 'bg-brand text-on-brand'
+                  : 'bg-surface-muted text-foreground-muted hover:bg-surface-raised'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-foreground-muted">Thanh toán:</span>
+          {PAYMENT_STATUS_FILTERS.map((item) => (
+            <button
+              key={item.value || 'all-pay'}
+              type="button"
+              onClick={() => {
+                setPaymentStatus(item.value)
+                setPage(1)
+              }}
+              className={`rounded-full px-3 py-1.5 text-sm ${
+                paymentStatus === item.value
+                  ? 'bg-brand text-on-brand'
+                  : 'bg-surface-muted text-foreground-muted hover:bg-surface-raised'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+            Từ ngày
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+            Đến ngày
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => onDateToChange(e.target.value)}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+            />
+          </label>
+          {dateRangeInvalid ? (
+            <p className="pb-2 text-sm text-danger-700">Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.</p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="search"
+            value={orderSearchDraft}
+            onChange={(e) => setOrderSearchDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') applyTextFilters()
             }}
-            className={`rounded-full px-3 py-1.5 text-sm ${
-              status === item.value
-                ? 'bg-brand text-on-brand'
-                : 'bg-surface-muted text-foreground-muted hover:bg-surface-raised'
-            }`}
+            placeholder="Mã đơn (8 ký tự cuối hoặc ObjectId)"
+            className="min-w-[12rem] flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          />
+          <input
+            type="search"
+            value={userIdDraft}
+            onChange={(e) => setUserIdDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') applyTextFilters()
+            }}
+            placeholder="Mã khách hàng (user_id)"
+            className="min-w-[12rem] flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={applyTextFilters}
+            className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-muted"
           >
-            {item.label}
+            Lọc
           </button>
-        ))}
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-md border border-border px-3 py-2 text-sm text-foreground-muted hover:bg-surface-muted"
+            >
+              Xóa bộ lọc
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {ordersQuery.data ? (
+        <p className="mb-3 text-sm text-foreground-muted">
+          {ordersQuery.data.total === 0
+            ? 'Không có đơn phù hợp bộ lọc.'
+            : `Tìm thấy ${ordersQuery.data.total} đơn`}
+        </p>
+      ) : null}
 
       {ordersQuery.isLoading ? <div className="h-48 animate-pulse rounded-xl bg-surface-muted" /> : null}
       {ordersQuery.isError ? (
@@ -145,6 +298,13 @@ export function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody>
+              {ordersQuery.data.items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-foreground-muted">
+                    Không có đơn hàng nào phù hợp.
+                  </td>
+                </tr>
+              ) : null}
               {ordersQuery.data.items.map((order) => (
                 <tr
                   key={order.id}

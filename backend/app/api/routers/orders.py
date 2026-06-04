@@ -1,5 +1,7 @@
 """Router đơn hàng — customer đặt / staff xử lý."""
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.dependencies import get_current_active_user, require_customer, require_manager, require_staff
@@ -13,7 +15,7 @@ from app.api.schemas.order import (
     VnpayPaymentInfo,
 )
 from app.core.roles import is_staff_or_above
-from app.models.enums import OrderStatus
+from app.models.enums import OrderStatus, PaymentStatus
 from app.models.user import User
 from app.services import order_service, vnpay_service
 
@@ -73,10 +75,14 @@ async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status_filter: OrderStatus | None = Query(None, alias="status"),
+    payment_status_filter: PaymentStatus | None = Query(None, alias="payment_status"),
     user_id: str | None = None,
+    search: str | None = Query(None, max_length=64),
+    from_date: date | None = Query(None, alias="from"),
+    to_date: date | None = Query(None, alias="to"),
     current_user: User = Depends(get_current_active_user),
 ) -> OrderListResponse:
-    """Customer: đơn của mình. Staff+: lọc theo user_id / status."""
+    """Customer: đơn của mình. Staff+: lọc theo user_id / status / thanh toán / mã đơn / ngày."""
 
     if user_id is not None and not is_staff_or_above(current_user):
         raise HTTPException(
@@ -89,7 +95,11 @@ async def list_orders(
         page=page,
         page_size=page_size,
         status_filter=status_filter,
+        payment_status_filter=payment_status_filter,
         user_id=user_id,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
     )
 
 
