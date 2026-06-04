@@ -76,3 +76,13 @@ services:
         sync: false
       - key: VNPAY_RETURN_URL_TEMPLATE
         sync: false
+
+      # --- Cloudinary (ảnh sản phẩm) ---
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER_PREFIX
+        value: curtain

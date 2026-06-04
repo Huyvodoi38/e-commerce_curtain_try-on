@@ -8,6 +8,7 @@ from app.api.routers import (
     cart,
     categories,
     health,
+    media,
     orders,
     payments,
     products,
@@ -20,6 +21,7 @@ api_router.include_router(health.router)
 api_router.include_router(auth.router)
 api_router.include_router(categories.router)
 api_router.include_router(products.router)
+api_router.include_router(media.router)
 api_router.include_router(promotions.router)
 api_router.include_router(cart.router)
 api_router.include_router(payments.router)

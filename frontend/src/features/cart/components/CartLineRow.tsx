@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { CartLineItem } from '@/features/cart/types'
+import { cdnImage, cdnPresets } from '@/lib/cloudinary/url'
 import { formatVnd } from '@/lib/utils/formatCurrency'
 
 type Props = {
@@ -19,7 +20,11 @@ export function CartLineRow({ item, onQuantityChange, onRemove, isUpdating }: Pr
         className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-surface-muted"
       >
         {item.display_image_url ? (
-          <img src={item.display_image_url} alt="" className="h-full w-full object-cover" />
+          <img
+            src={cdnImage(item.display_image_url, cdnPresets.cartThumb) ?? item.display_image_url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-foreground-subtle">
             N/A

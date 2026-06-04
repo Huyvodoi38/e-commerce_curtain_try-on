@@ -217,6 +217,10 @@ async def update_product(product_id: str, data: ProductUpdate) -> ProductDetail:
     """Thay thế toàn bộ sản phẩm."""
 
     product = await _get_product_or_404(product_id)
+    previous_image_urls = resolved_image_urls(
+        product.image_urls,
+        product.display_image_url,
+    )
     product.name = data.name
     product.description = data.description
     product.price = data.price
@@ -232,6 +236,11 @@ async def update_product(product_id: str, data: ProductUpdate) -> ProductDetail:
     product.attributes = data.attributes
     product.is_active = data.is_active
     product.updated_at = utc_now()
+
+    from app.services import media_service
+
+    new_image_urls = resolved_image_urls(product.image_urls, product.display_image_url)
+    media_service.delete_removed_image_urls(previous_image_urls, new_image_urls)
     await product.save()
     return product_to_detail(product)
 
@@ -246,7 +255,12 @@ async def patch_product(product_id: str, data: ProductPatch) -> ProductDetail:
 
     image_urls = updates.pop("image_urls", None)
     display_image_url = updates.pop("display_image_url", None)
+    previous_image_urls: list[str] | None = None
     if image_urls is not None or display_image_url is not None:
+        previous_image_urls = resolved_image_urls(
+            product.image_urls,
+            product.display_image_url,
+        )
         merged_urls = image_urls if image_urls is not None else product.image_urls
         merged_display = display_image_url if display_image_url is not None else product.display_image_url
         _apply_images_to_product(
@@ -263,6 +277,13 @@ async def patch_product(product_id: str, data: ProductPatch) -> ProductDetail:
             detail="sale_price không được lớn hơn price",
         )
     product.updated_at = utc_now()
+
+    if previous_image_urls is not None:
+        from app.services import media_service
+
+        new_image_urls = resolved_image_urls(product.image_urls, product.display_image_url)
+        media_service.delete_removed_image_urls(previous_image_urls, new_image_urls)
+
     await product.save()
     return product_to_detail(product)
 
@@ -310,6 +331,10 @@ async def delete_product_permanent(product_id: str) -> None:
         )
 
     await _remove_product_from_carts(oid)
+
+    from app.services import media_service
+
+    media_service.delete_images_for_product(product)
     await product.delete()
 
 

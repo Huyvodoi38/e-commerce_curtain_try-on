@@ -9,6 +9,7 @@ import { useProductDetailQuery } from '@/features/products/hooks'
 import { getErrorMessage } from '@/lib/api/client'
 import { loginPathWithRedirect } from '@/lib/auth/paths'
 import { categoryProductsPath } from '@/lib/catalog/categories'
+import { cdnImage, cdnPresets } from '@/lib/cloudinary/url'
 import { productImageUrls, productPrimaryImageUrl } from '@/lib/products/images'
 import { formatVnd } from '@/lib/utils/formatCurrency'
 
@@ -238,16 +239,21 @@ function ProductImageGallery({ images, productName }: { images: string[]; produc
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const safeIndex = Math.min(activeImageIndex, Math.max(0, images.length - 1))
   const activeImage = images[safeIndex] ?? null
+  const activeSrc = activeImage
+    ? (cdnImage(activeImage, cdnPresets.productDetail) ?? activeImage)
+    : null
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised shadow-sm">
-        {activeImage ? (
-          <img src={activeImage} alt={productName} className="aspect-square w-full object-cover" />
+      <div className="flex min-h-[280px] items-center justify-center overflow-hidden rounded-2xl border border-border-subtle bg-surface-muted shadow-sm sm:min-h-[320px]">
+        {activeSrc ? (
+          <img
+            src={activeSrc}
+            alt={productName}
+            className="max-h-[min(70vh,480px)] w-full object-contain"
+          />
         ) : (
-          <div className="flex aspect-square items-center justify-center text-sm text-foreground-subtle">
-            Chưa có ảnh
-          </div>
+          <p className="py-16 text-sm text-foreground-subtle">Chưa có ảnh</p>
         )}
       </div>
       {images.length > 1 ? (
@@ -280,7 +286,7 @@ function ProductImageGallery({ images, productName }: { images: string[]; produc
                   }`}
                 >
                   <img
-                    src={url}
+                    src={cdnImage(url, cdnPresets.productThumb) ?? url}
                     alt=""
                     className={`h-full w-full object-cover transition-opacity duration-200 ${
                       isActive ? 'opacity-100' : 'opacity-85 group-hover:opacity-100'

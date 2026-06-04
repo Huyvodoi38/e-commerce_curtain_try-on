@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
 import { getErrorMessage } from '@/lib/api/client'
+import { cdnImage, cdnPresets } from '@/lib/cloudinary/url'
 import { productPrimaryImageUrl } from '@/lib/products/images'
 import { formatVnd } from '@/lib/utils/formatCurrency'
 import { useCategoryQuery } from '@/features/categories/hooks'
@@ -72,7 +73,7 @@ export function ProductListPage() {
           <div className="mb-4 text-sm text-foreground-subtle">Tìm thấy {data.total} sản phẩm</div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.items.map((item) => {
-              const thumb = productPrimaryImageUrl(item)
+              const thumb = cdnImage(productPrimaryImageUrl(item), cdnPresets.productCard)
               return (
               <article
                 key={item.id}

@@ -61,6 +61,7 @@ export default defineConfig({
       '/orders': apiProxy(),
       '/users': apiProxy(),
       '/audit-logs': apiProxy(),
+      '/media': apiProxy(),
     },
   },
 })

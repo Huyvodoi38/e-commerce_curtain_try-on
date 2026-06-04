@@ -53,7 +53,21 @@ class Settings(BaseSettings):
     # Return URL template — {order_id} thay bằng id đơn
     VNPAY_RETURN_URL_TEMPLATE: str = "http://localhost:5173/orders/{order_id}/pay/return"
 
+    # Cloudinary — ảnh sản phẩm & AI try-on
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_FOLDER_PREFIX: str = "curtain"
+
     model_config = SettingsConfigDict(env_file=str(BACKEND_DIR / ".env"))
+
+    @property
+    def cloudinary_enabled(self) -> bool:
+        return bool(
+            self.CLOUDINARY_CLOUD_NAME.strip()
+            and self.CLOUDINARY_API_KEY.strip()
+            and self.CLOUDINARY_API_SECRET.strip()
+        )
 
     @property
     def vnpay_enabled(self) -> bool:

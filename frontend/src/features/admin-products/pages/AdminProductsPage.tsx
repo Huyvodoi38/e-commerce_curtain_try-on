@@ -16,7 +16,15 @@ import {
 } from '@/features/admin-products/hooks'
 import { useCategoriesQuery } from '@/features/categories/hooks'
 import { getErrorMessage } from '@/lib/api/client'
+import { ProductImagesField } from '@/features/admin-products/components/ProductImagesField'
+import {
+  resolveDraftItemsToUrls,
+  revokeProductImageDrafts,
+  savedUrlsToDraftItems,
+  type ProductImageDraftItem,
+} from '@/features/admin-products/productImageDraft'
 import { productPrimaryImageUrl } from '@/lib/products/images'
+import { cdnImage, cdnPresets } from '@/lib/cloudinary/url'
 import {
   canManageProducts,
   canPatchProductStock,
@@ -32,15 +40,8 @@ const emptyForm = {
   salePrice: '' as number | '',
   stock: 0,
   categories: [] as string[],
-  imageUrlsText: '',
+  imageItems: [] as ProductImageDraftItem[],
   isActive: true,
-}
-
-function parseImageUrls(text: string): string[] {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
 }
 
 export function AdminProductsPage() {
@@ -51,6 +52,7 @@ export function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [stockDrafts, setStockDrafts] = useState<Record<string, number>>({})
+  const [imageSubmitting, setImageSubmitting] = useState(false)
   const [confirmAction, setConfirmAction] = useState<
     | { type: 'hide' | 'delete' | 'restore'; id: string; name: string }
     | { type: 'create' }
@@ -83,6 +85,7 @@ export function AdminProductsPage() {
   )
 
   function resetForm() {
+    revokeProductImageDrafts(form.imageItems)
     setForm(emptyForm)
     setEditingId(null)
   }
@@ -98,22 +101,31 @@ export function AdminProductsPage() {
 
   async function handleCreate() {
     if (!form.name.trim()) return
-    await createMutation.mutateAsync({
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      price: form.price,
-      sale_price: form.salePrice === '' ? null : form.salePrice,
-      stock: form.stock,
-      categories: form.categories,
-      image_urls: parseImageUrls(form.imageUrlsText),
-      is_active: form.isActive,
-    })
-    setShowCreate(false)
-    resetForm()
+    setImageSubmitting(true)
+    try {
+      const image_urls = await resolveDraftItemsToUrls(form.imageItems)
+      await createMutation.mutateAsync({
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        price: form.price,
+        sale_price: form.salePrice === '' ? null : form.salePrice,
+        stock: form.stock,
+        categories: form.categories,
+        image_urls,
+        is_active: form.isActive,
+      })
+      revokeProductImageDrafts(form.imageItems)
+      setShowCreate(false)
+      setForm(emptyForm)
+      setEditingId(null)
+    } finally {
+      setImageSubmitting(false)
+    }
   }
 
   async function openEdit(id: string) {
     setShowCreate(false)
+    revokeProductImageDrafts(form.imageItems)
     setEditingId(id)
     try {
       const detail = await fetchAdminProductDetail(id)
@@ -124,7 +136,7 @@ export function AdminProductsPage() {
         salePrice: detail.sale_price ?? '',
         stock: detail.stock,
         categories: detail.categories,
-        imageUrlsText: detail.image_urls.join('\n'),
+        imageItems: savedUrlsToDraftItems(detail.image_urls),
         isActive: detail.is_active,
       })
     } catch {
@@ -134,20 +146,28 @@ export function AdminProductsPage() {
 
   async function handleUpdate() {
     if (!editingId || !form.name.trim()) return
-    await patchMutation.mutateAsync({
-      id: editingId,
-      body: {
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        price: form.price,
-        sale_price: form.salePrice === '' ? null : form.salePrice,
-        stock: form.stock,
-        categories: form.categories,
-        image_urls: parseImageUrls(form.imageUrlsText),
-        is_active: form.isActive,
-      },
-    })
-    resetForm()
+    setImageSubmitting(true)
+    try {
+      const image_urls = await resolveDraftItemsToUrls(form.imageItems)
+      await patchMutation.mutateAsync({
+        id: editingId,
+        body: {
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          price: form.price,
+          sale_price: form.salePrice === '' ? null : form.salePrice,
+          stock: form.stock,
+          categories: form.categories,
+          image_urls,
+          is_active: form.isActive,
+        },
+      })
+      revokeProductImageDrafts(form.imageItems)
+      setForm(emptyForm)
+      setEditingId(null)
+    } finally {
+      setImageSubmitting(false)
+    }
   }
 
   async function submitConfirmAction() {
@@ -178,6 +198,7 @@ export function AdminProductsPage() {
   }
 
   const confirmPending =
+    imageSubmitting ||
     createMutation.isPending ||
     patchMutation.isPending ||
     stockMutation.isPending ||
@@ -214,6 +235,7 @@ export function AdminProductsPage() {
                 setShowCreate(false)
                 resetForm()
               } else {
+                revokeProductImageDrafts(form.imageItems)
                 setShowCreate(true)
                 setEditingId(null)
                 setForm(emptyForm)
@@ -297,19 +319,11 @@ export function AdminProductsPage() {
             </div>
 
             <div className="md:col-span-2">
-              <FormField label="URL ảnh (mỗi dòng một link)" htmlFor="product-images">
-                <textarea
-                  id="product-images"
-                  rows={3}
-                  value={form.imageUrlsText}
-                  onChange={(e) => setForm((f) => ({ ...f, imageUrlsText: e.target.value }))}
-                  placeholder="https://example.com/image1.jpg"
-                  className={inputClassName}
-                />
-                <p className="mt-1 text-xs text-foreground-subtle">
-                  Ảnh đầu tiên là ảnh chính hiển thị trên cửa hàng.
-                </p>
-              </FormField>
+              <ProductImagesField
+                items={form.imageItems}
+                onChange={(imageItems) => setForm((f) => ({ ...f, imageItems }))}
+                disabled={!canManageProducts(role)}
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -370,6 +384,7 @@ export function AdminProductsPage() {
               type="button"
               onClick={() => setConfirmAction({ type: editingId ? 'update' : 'create' })}
               disabled={
+                imageSubmitting ||
                 createMutation.isPending ||
                 patchMutation.isPending ||
                 !form.name.trim()
@@ -419,7 +434,7 @@ export function AdminProductsPage() {
             </thead>
             <tbody>
               {productsQuery.data.items.map((item) => {
-                const thumb = productPrimaryImageUrl(item)
+                const thumb = cdnImage(productPrimaryImageUrl(item), cdnPresets.adminTableThumb)
                 const stockValue = stockDrafts[item.id] ?? item.stock
                 const stockDirty = stockDrafts[item.id] !== undefined && stockDrafts[item.id] !== item.stock
 
@@ -586,12 +601,13 @@ export function AdminProductsPage() {
               <>
                 Tạo sản phẩm{' '}
                 <span className="font-medium text-foreground">{form.name.trim()}</span> trên cửa
-                hàng?
+                hàng? Ảnh mới sẽ được tải lên Cloudinary khi bạn xác nhận.
               </>
             ) : confirmAction.type === 'update' ? (
               <>
                 Lưu thay đổi cho sản phẩm{' '}
-                <span className="font-medium text-foreground">{form.name.trim()}</span>?
+                <span className="font-medium text-foreground">{form.name.trim()}</span>? Ảnh mới sẽ
+                được tải lên Cloudinary; ảnh đã gỡ sẽ bị xóa trên Cloudinary.
               </>
             ) : confirmAction.type === 'stock' ? (
               <>
