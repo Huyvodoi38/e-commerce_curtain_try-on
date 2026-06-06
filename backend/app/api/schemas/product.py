@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.api.schemas.ai import AiResolveInfo
 from app.utils.product_images import normalize_image_urls
 
 
@@ -102,6 +103,10 @@ class ProductPublic(BaseModel):
     image_urls: list[str]
     display_image_url: str | None
     ai_texture_url: str | None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    ai_tryon_available: bool = False
+    rating_avg: float | None = None
+    rating_count: int = 0
 
 
 class ProductListItem(ProductPublic):
@@ -114,9 +119,9 @@ class ProductDetail(ProductPublic):
     """Chi tiết — thêm field nội bộ khi staff/manager xem."""
 
     is_active: bool
-    attributes: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    ai_resolve: AiResolveInfo | None = None
 
 
 class ProductListResponse(BaseModel):
@@ -127,3 +132,9 @@ class ProductListResponse(BaseModel):
     page: int
     page_size: int
     pages: int
+
+
+class ProductRecommendationsResponse(BaseModel):
+    """Sản phẩm đề xuất — không phân trang."""
+
+    items: list[ProductPublic]

@@ -1,3 +1,8 @@
+export type AiResolveInfo = {
+  missing_slots: string[]
+  unmapped: string[]
+}
+
 export type AdminProduct = {
   id: string
   name: string
@@ -11,13 +16,15 @@ export type AdminProduct = {
   image_urls: string[]
   display_image_url: string | null
   ai_texture_url: string | null
+  attributes: Record<string, unknown>
+  ai_tryon_available: boolean
   is_active: boolean
 }
 
 export type AdminProductDetail = AdminProduct & {
-  attributes: Record<string, unknown>
   created_at: string
   updated_at: string
+  ai_resolve: AiResolveInfo | null
 }
 
 export type AdminProductListResponse = {

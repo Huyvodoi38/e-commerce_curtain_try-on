@@ -39,6 +39,8 @@ export function useConfirmOrderPaymentMutation() {
     mutationFn: (orderId: string) => confirmOrderPayment(orderId),
     onSuccess: (_, orderId) => {
       void qc.invalidateQueries({ queryKey: ['admin-orders'] })
+      void qc.invalidateQueries({ queryKey: ['admin-overview'] })
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] })
       void qc.invalidateQueries({ queryKey: adminOrderDetailQueryKey(orderId) })
       void qc.invalidateQueries({ queryKey: ['orders'] })
     },
@@ -52,6 +54,8 @@ export function useUpdateOrderStatusMutation() {
       updateOrderStatus(orderId, body),
     onSuccess: (_, vars) => {
       void qc.invalidateQueries({ queryKey: ['admin-orders'] })
+      void qc.invalidateQueries({ queryKey: ['admin-overview'] })
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] })
       void qc.invalidateQueries({ queryKey: adminOrderDetailQueryKey(vars.orderId) })
       void qc.invalidateQueries({ queryKey: ['orders'] })
     },
@@ -64,6 +68,8 @@ export function useDeleteOrderPermanentMutation() {
     mutationFn: (orderId: string) => deleteOrderPermanent(orderId),
     onSuccess: (_, orderId) => {
       void qc.invalidateQueries({ queryKey: ['admin-orders'] })
+      void qc.invalidateQueries({ queryKey: ['admin-overview'] })
+      void qc.invalidateQueries({ queryKey: ['admin-stats'] })
       void qc.removeQueries({ queryKey: adminOrderDetailQueryKey(orderId) })
       void qc.invalidateQueries({ queryKey: ['orders'] })
     },

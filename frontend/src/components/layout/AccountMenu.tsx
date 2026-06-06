@@ -74,12 +74,15 @@ export function AccountMenu({ user }: Props) {
             </AccountMenuLink>
           ) : (
             <>
-              <AccountMenuLink to="/orders" onNavigate={() => setOpen(false)}>
+              <AccountMenuLink to="/account/orders" onNavigate={() => setOpen(false)}>
                 Đơn hàng
               </AccountMenuLink>
-              <MenuDivider />
-              <AccountMenuSoon label="Quản lý tài khoản" />
-              <AccountMenuSoon label="Lịch sử Try-on" />
+              <AccountMenuLink to="/account" onNavigate={() => setOpen(false)}>
+                Quản lý tài khoản
+              </AccountMenuLink>
+              <AccountMenuLink to="/account/try-on" onNavigate={() => setOpen(false)}>
+                Lịch sử Try-on
+              </AccountMenuLink>
             </>
           )}
 
@@ -117,22 +120,6 @@ function AccountMenuLink({
     >
       {children}
     </Link>
-  )
-}
-
-function AccountMenuSoon({ label }: { label: string }) {
-  return (
-    <span
-      role="menuitem"
-      aria-disabled="true"
-      className="flex cursor-not-allowed items-center justify-between px-4 py-2.5 text-sm text-foreground-subtle"
-      title="Tính năng sắp ra mắt"
-    >
-      {label}
-      <span className="text-[10px] font-medium uppercase tracking-wide text-foreground-subtle/80">
-        Sắp có
-      </span>
-    </span>
   )
 }
 

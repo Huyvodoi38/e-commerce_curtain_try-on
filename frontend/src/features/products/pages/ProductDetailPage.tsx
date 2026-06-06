@@ -5,6 +5,11 @@ import { PageShell } from '@/components/common/PageShell'
 import { Badge } from '@/components/ui/Badge'
 import { useAddCartItemMutation } from '@/features/cart/hooks'
 import { useMeQuery } from '@/features/auth/hooks'
+import { ProductAttributesPanel } from '@/features/products/components/ProductAttributesPanel'
+import { RecommendedProducts } from '@/features/products/components/RecommendedProducts'
+import { ProductReviewSection } from '@/features/reviews/components/ProductReviewSection'
+import { StarRating } from '@/features/reviews/components/StarRating'
+import { TryOnModal } from '@/features/try-on/components/TryOnModal'
 import { useProductDetailQuery } from '@/features/products/hooks'
 import { getErrorMessage } from '@/lib/api/client'
 import { loginPathWithRedirect } from '@/lib/auth/paths'
@@ -20,6 +25,7 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [cartNotice, setCartNotice] = useState<string | null>(null)
   const [cartError, setCartError] = useState<string | null>(null)
+  const [tryOnOpen, setTryOnOpen] = useState(false)
 
   const productQuery = useProductDetailQuery(id)
   const meQuery = useMeQuery()
@@ -113,9 +119,12 @@ export function ProductDetailPage() {
   }
 
   const maxQuantity = Math.max(product.stock, 1)
+  const attributeEntries = Object.entries(product.attributes ?? {}).filter(
+    ([, value]) => value != null && String(value).trim(),
+  )
 
   return (
-    <PageShell title={product.name} description={product.description ?? undefined}>
+    <PageShell title={product.name}>
       <nav className="mb-6 text-sm text-foreground-muted" aria-label="Breadcrumb">
         <Link to="/products" className="hover:text-brand">
           Sản phẩm
@@ -148,6 +157,14 @@ export function ProductDetailPage() {
             {product.is_on_sale && product.sale_price ? (
               <span className="text-lg text-foreground-subtle line-through">{formatVnd(product.price)}</span>
             ) : null}
+            {product.rating_count > 0 && product.rating_avg != null ? (
+              <span className="flex items-center gap-1.5 text-sm text-foreground-muted">
+                <StarRating value={product.rating_avg} size="sm" label={`${product.rating_avg} sao`} />
+                <span>
+                  {product.rating_avg.toFixed(1)} ({product.rating_count})
+                </span>
+              </span>
+            ) : null}
           </div>
 
           {product.categories.length > 0 ? (
@@ -163,6 +180,8 @@ export function ProductDetailPage() {
               ))}
             </div>
           ) : null}
+
+          <ProductAttributesPanel entries={attributeEntries} />
 
           {!isCustomer ? (
             <p className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
@@ -212,6 +231,15 @@ export function ProductDetailPage() {
           ) : null}
 
           <div className="flex flex-wrap gap-3">
+            {product.ai_tryon_available ? (
+              <button
+                type="button"
+                onClick={() => setTryOnOpen(true)}
+                className="rounded-md border border-brand bg-brand-subtle px-5 py-2.5 text-sm font-medium text-brand hover:bg-brand/10"
+              >
+                Thử rèm AI
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void handleAddToCart()}
@@ -231,6 +259,37 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {product.description?.trim() ? (
+        <section
+          className="mt-10 overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised shadow-sm"
+          aria-labelledby="product-description-heading"
+        >
+          <div className="border-b border-border bg-gradient-to-r from-surface-muted/90 to-surface-raised px-5 py-3.5">
+            <h2 id="product-description-heading" className="text-sm font-semibold text-foreground">
+              Mô tả rèm cửa
+            </h2>
+          </div>
+          <div className="px-5 py-4 text-sm leading-relaxed text-foreground-muted whitespace-pre-line">
+            {product.description.trim()}
+          </div>
+        </section>
+      ) : null}
+
+      <ProductReviewSection
+        productId={product.id}
+        ratingAvg={product.rating_avg}
+        ratingCount={product.rating_count}
+      />
+
+      <RecommendedProducts productId={product.id} />
+
+      <TryOnModal
+        productId={product.id}
+        productName={product.name}
+        open={tryOnOpen}
+        onClose={() => setTryOnOpen(false)}
+      />
     </PageShell>
   )
 }

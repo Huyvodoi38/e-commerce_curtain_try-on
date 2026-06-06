@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 type Props = {
-  label: string
+  label?: string
   htmlFor: string
   error?: string
   children: ReactNode
@@ -10,9 +10,11 @@ type Props = {
 export function FormField({ label, htmlFor, error, children }: Props) {
   return (
     <div className="space-y-1">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-foreground-muted">
-        {label}
-      </label>
+      {label ? (
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-foreground-muted">
+          {label}
+        </label>
+      ) : null}
       {children}
       {error ? <p className="text-sm text-danger-700">{error}</p> : null}
     </div>

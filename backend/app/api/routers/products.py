@@ -9,6 +9,7 @@ from app.api.schemas.product import (
     ProductListResponse,
     ProductPatch,
     ProductPublic,
+    ProductRecommendationsResponse,
     ProductStockPatch,
     ProductUpdate,
 )
@@ -75,6 +76,16 @@ async def get_product(
             allow_inactive=True,
         )
     return await product_service.get_product_public(product_id)
+
+
+@router.get("/{product_id}/recommendations", response_model=ProductRecommendationsResponse)
+async def get_product_recommendations(
+    product_id: str,
+    limit: int = Query(6, ge=1, le=12),
+) -> ProductRecommendationsResponse:
+    """Sản phẩm đề xuất — guest/customer."""
+
+    return await product_service.get_product_recommendations(product_id, limit=limit)
 
 
 @router.post("", response_model=ProductDetail, status_code=status.HTTP_201_CREATED)

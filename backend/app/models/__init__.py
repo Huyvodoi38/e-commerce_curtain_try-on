@@ -11,6 +11,7 @@ from app.models.enums import (
     OrderStatus,
     PaymentMethod,
     PaymentStatus,
+    ReviewSource,
     UserRole,
 )
 from app.models.cart import Cart, CartItem
@@ -20,6 +21,7 @@ from app.models.oauth_account import UserOAuthAccount
 from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.models.promotion import Promotion
+from app.models.review import ProductReview
 from app.models.refresh_token import RefreshToken
 from app.models.schemas import ShippingAddress
 from app.models.user import User
@@ -41,8 +43,10 @@ __all__ = [
     "PaymentMethod",
     "PaymentStatus",
     "Product",
+    "ProductReview",
     "Promotion",
     "RefreshToken",
+    "ReviewSource",
     "ShippingAddress",
     "TryOnHistory",
     "User",

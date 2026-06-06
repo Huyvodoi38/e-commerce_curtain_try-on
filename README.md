@@ -1,4 +1,4 @@
-# Curtain AI TryOn
+# Quang Huy Shop
 
 Fullstack monorepo gồm:
 

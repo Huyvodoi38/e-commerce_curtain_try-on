@@ -90,6 +90,13 @@ class AIStatus(str, Enum):
     FAILED = "failed"
 
 
+class ReviewSource(str, Enum):
+    """Nguồn tạo đánh giá."""
+
+    CUSTOMER = "customer"
+    ADMIN = "admin"
+
+
 class ActivityAction(str, Enum):
     """Hành động ghi vào activity log."""
 
@@ -108,3 +115,7 @@ class ActivityAction(str, Enum):
     ORDER_CANCELLED_BY_STAFF = "order.cancelled_by_staff"
     ORDER_PAYMENT_VNPAY = "order.payment_vnpay"
     ORDER_CANCELLED_VNPAY_EXPIRED = "order.cancelled_vnpay_expired"
+    REVIEW_CREATED = "review.created"
+    REVIEW_CREATED_ADMIN = "review.created_admin"
+    REVIEW_DELETED = "review.deleted"
+    REVIEW_DELETED_ADMIN = "review.deleted_admin"

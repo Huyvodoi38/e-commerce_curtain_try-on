@@ -13,6 +13,10 @@ export type ProductPublic = {
   image_urls: string[]
   display_image_url: string | null
   ai_texture_url: string | null
+  attributes: Record<string, unknown>
+  ai_tryon_available: boolean
+  rating_avg: number | null
+  rating_count: number
 }
 
 export type ProductListResponse = {
@@ -29,6 +33,8 @@ export type ProductsQueryParams = {
   search?: string
   category?: string
   in_stock_only?: boolean
+  sort?: 'created_at' | 'price' | 'name'
+  order?: 'asc' | 'desc'
 }
 
 export async function fetchProducts(params: ProductsQueryParams): Promise<ProductListResponse> {
@@ -38,5 +44,20 @@ export async function fetchProducts(params: ProductsQueryParams): Promise<Produc
 
 export async function fetchProductDetail(id: string): Promise<ProductPublic> {
   const { data } = await apiClient.get<ProductPublic>(`/products/${id}`)
+  return data
+}
+
+export type ProductRecommendationsResponse = {
+  items: ProductPublic[]
+}
+
+export async function fetchProductRecommendations(
+  productId: string,
+  limit = 6,
+): Promise<ProductRecommendationsResponse> {
+  const { data } = await apiClient.get<ProductRecommendationsResponse>(
+    `/products/${productId}/recommendations`,
+    { params: { limit } },
+  )
   return data
 }

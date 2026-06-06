@@ -15,6 +15,7 @@ from app.models.order import Order
 from app.models.payment_transaction import PaymentTransaction
 from app.models.product import Product
 from app.models.promotion import Promotion
+from app.models.review import ProductReview
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 
@@ -33,6 +34,7 @@ async def init_db() -> None:
             RefreshToken,
             Category,
             Product,
+            ProductReview,
             Cart,
             Order,
             PaymentTransaction,

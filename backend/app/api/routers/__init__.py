@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.routers import (
     admin,
+    ai,
     audit_logs,
     auth,
     cart,
@@ -14,6 +15,7 @@ from app.api.routers import (
     payments,
     products,
     promotions,
+    reviews,
     users,
 )
 
@@ -22,7 +24,11 @@ api_router.include_router(health.router)
 api_router.include_router(admin.router)
 api_router.include_router(auth.router)
 api_router.include_router(categories.router)
+api_router.include_router(reviews.product_reviews_router)
 api_router.include_router(products.router)
+api_router.include_router(reviews.reviews_router)
+api_router.include_router(reviews.admin_reviews_router)
+api_router.include_router(ai.router)
 api_router.include_router(media.router)
 api_router.include_router(promotions.router)
 api_router.include_router(cart.router)

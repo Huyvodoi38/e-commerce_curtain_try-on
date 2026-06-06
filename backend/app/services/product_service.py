@@ -8,6 +8,8 @@ from typing import Any
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 
+from app.ai.prompt_resolver import resolve_ai_prompt
+from app.api.schemas.ai import AiResolveInfo
 from app.api.schemas.product import (
     ProductCreate,
     ProductDetail,
@@ -15,6 +17,7 @@ from app.api.schemas.product import (
     ProductListResponse,
     ProductPatch,
     ProductPublic,
+    ProductRecommendationsResponse,
     ProductStockPatch,
     ProductUpdate,
 )
@@ -22,6 +25,7 @@ from app.models.cart import Cart
 from app.models.common import utc_now
 from app.models.order import Order
 from app.models.product import Product
+from app.models.review import ProductReview
 from app.services import category_service
 from app.utils.product_images import normalize_image_urls, resolved_image_urls
 
@@ -45,11 +49,27 @@ def _apply_images_to_product(
     product.display_image_url = primary
 
 
+def _product_attributes(product: Product) -> dict[str, Any]:
+    attrs = product.attributes if isinstance(product.attributes, dict) else {}
+    return attrs
+
+
+def _ai_fields_from_attributes(attrs: dict[str, Any]) -> tuple[bool, AiResolveInfo]:
+    resolved = resolve_ai_prompt(attrs)
+    info = AiResolveInfo(
+        missing_slots=resolved.missing_slots,
+        unmapped=resolved.unmapped,
+    )
+    return resolved.available, info
+
+
 def product_to_public(product: Product) -> ProductPublic:
     """Map sang schema public."""
 
     effective, on_sale = compute_effective_price(product.price, product.sale_price)
     urls = resolved_image_urls(product.image_urls, product.display_image_url)
+    attrs = _product_attributes(product)
+    ai_available, _ = _ai_fields_from_attributes(attrs)
     return ProductPublic(
         id=str(product.id),
         name=product.name,
@@ -63,6 +83,10 @@ def product_to_public(product: Product) -> ProductPublic:
         image_urls=urls,
         display_image_url=urls[0] if urls else None,
         ai_texture_url=product.ai_texture_url,
+        attributes=attrs,
+        ai_tryon_available=ai_available,
+        rating_avg=product.rating_avg,
+        rating_count=product.rating_count,
     )
 
 
@@ -79,13 +103,14 @@ def product_to_detail(product: Product) -> ProductDetail:
     """Map sang schema chi tiết (staff/manager)."""
 
     base = product_to_public(product)
-    attrs = product.attributes if isinstance(product.attributes, dict) else {}
+    attrs = _product_attributes(product)
+    _, ai_resolve = _ai_fields_from_attributes(attrs)
     return ProductDetail(
         **base.model_dump(),
         is_active=product.is_active,
-        attributes=attrs,
         created_at=product.created_at,
         updated_at=product.updated_at,
+        ai_resolve=ai_resolve,
     )
 
 
@@ -178,6 +203,57 @@ async def get_product_public(product_id: str) -> ProductPublic:
     if not product.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy sản phẩm")
     return product_to_public(product)
+
+
+async def get_product_recommendations(product_id: str, *, limit: int = 6) -> ProductRecommendationsResponse:
+    """
+    Gợi ý sản phẩm: ưu tiên cùng danh mục, bổ sung SP mới còn hàng nếu thiếu.
+    """
+
+    product = await _get_product_or_404(product_id)
+    if not product.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy sản phẩm")
+
+    capped_limit = min(max(limit, 1), 12)
+    base_filter: dict[str, Any] = {
+        "is_active": True,
+        "stock": {"$gt": 0},
+        "_id": {"$ne": product.id},
+    }
+
+    picked: list[Product] = []
+    seen_ids: set[PydanticObjectId] = set()
+
+    categories = product.categories or []
+    if categories:
+        category_matches = (
+            await Product.find({**base_filter, "categories": {"$in": categories}})
+            .sort([("rating_count", -1), ("created_at", -1)])
+            .limit(capped_limit)
+            .to_list()
+        )
+        for candidate in category_matches:
+            if candidate.id in seen_ids:
+                continue
+            seen_ids.add(candidate.id)
+            picked.append(candidate)
+            if len(picked) >= capped_limit:
+                break
+
+    if len(picked) < capped_limit:
+        remaining = capped_limit - len(picked)
+        fallback_matches = (
+            await Product.find(base_filter).sort([("created_at", -1)]).limit(remaining + len(seen_ids)).to_list()
+        )
+        for candidate in fallback_matches:
+            if candidate.id in seen_ids:
+                continue
+            seen_ids.add(candidate.id)
+            picked.append(candidate)
+            if len(picked) >= capped_limit:
+                break
+
+    return ProductRecommendationsResponse(items=[product_to_public(item) for item in picked])
 
 
 async def get_product_detail(product_id: str, *, allow_inactive: bool) -> ProductDetail:
@@ -331,6 +407,7 @@ async def delete_product_permanent(product_id: str) -> None:
         )
 
     await _remove_product_from_carts(oid)
+    await ProductReview.find(ProductReview.product_id == oid).delete()
 
     from app.services import media_service
 

@@ -20,7 +20,7 @@ export function StaffLogsPage() {
   const totalPages = resolveTotalPages(logsQuery.data?.total ?? 0, pageSize)
 
   return (
-    <PageShell title="Timeline nhân viên">
+    <PageShell title="Nhật ký nhân viên">
       <Link to="/admin/staff" className="mb-4 inline-block text-sm text-brand hover:underline">
         ← Quay lại danh sách nhân viên
       </Link>

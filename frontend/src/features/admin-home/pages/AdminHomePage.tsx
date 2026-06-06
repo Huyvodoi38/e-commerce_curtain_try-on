@@ -61,13 +61,12 @@ export function AdminHomePage() {
   const role = meQuery.data?.role
 
   return (
-    <PageShell
-      title="Trang chủ"
-      description={
-        meQuery.data
-          ? `Xin chào, ${meQuery.data.full_name}. Tóm tắt hoạt động hôm nay.`
-          : 'Tóm tắt hoạt động hôm nay.'
-      }>
+    <PageShell title="Trang chủ">
+      {meQuery.data ? (
+        <p className="mb-6 text-sm text-foreground-muted">
+          Xin chào, <span className="font-medium text-foreground">{meQuery.data.full_name}</span>
+        </p>
+      ) : null}
       {overviewQuery.isLoading ? (
         <div className="h-48 animate-pulse rounded-xl bg-surface-muted" />
       ) : null}

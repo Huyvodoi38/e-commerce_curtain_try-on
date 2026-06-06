@@ -27,7 +27,7 @@ services:
       - key: MONGODB_DB_NAME
         value: Curtain_AI_TryOn
       - key: PROJECT_NAME
-        value: Curtain AI TryOn
+        value: Quang Huy Shop
       - key: BEANIE_ALLOW_INDEX_DROPPING
         value: "false"
 

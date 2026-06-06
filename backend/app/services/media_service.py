@@ -99,6 +99,63 @@ async def upload_image(file: UploadFile, *, folder: str) -> dict[str, Any]:
     }
 
 
+async def upload_image_bytes(
+    data: bytes,
+    *,
+    folder: str,
+    content_type: str = "image/png",
+    filename: str = "image.png",
+) -> dict[str, Any]:
+    """Upload bytes ảnh vào Cloudinary (dùng nội bộ, vd. AI try-on save)."""
+
+    require_cloudinary()
+    _configure_cloudinary()
+
+    cleaned_type = content_type.split(";")[0].strip().lower()
+    if cleaned_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP",
+        )
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File rỗng")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ảnh không được lớn hơn 5MB",
+        )
+
+    target_folder = cloudinary_folder_path(folder)
+    try:
+        result = cloudinary.uploader.upload(
+            io.BytesIO(data),
+            folder=target_folder,
+            resource_type="image",
+            use_filename=True,
+            unique_filename=True,
+            filename=filename.rsplit(".", 1)[0] if "." in filename else filename,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Không upload được lên Cloudinary",
+        ) from exc
+
+    secure_url = result.get("secure_url") or result.get("url")
+    public_id = result.get("public_id")
+    if not secure_url or not public_id:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Phản hồi Cloudinary không hợp lệ",
+        )
+
+    return {
+        "url": secure_url,
+        "public_id": public_id,
+        "folder": target_folder,
+    }
+
+
 def _product_image_urls(product: Product) -> list[str]:
     urls = resolved_image_urls(product.image_urls, product.display_image_url)
     if product.ai_texture_url:

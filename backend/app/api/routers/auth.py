@@ -4,22 +4,31 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from fastapi.responses import RedirectResponse
 
 from app.api.cookies import REFRESH_COOKIE_NAME, clear_refresh_cookie, set_refresh_cookie
-from app.api.dependencies import get_current_active_user
+from app.api.dependencies import get_current_active_user, require_customer
 from app.api.oauth_redirects import (
     auth_callback_success_redirect,
     http_exception_to_google_error,
     login_error_redirect,
     read_redirect_from_oauth_state,
 )
-from app.api.schemas.auth import TokenResponse, UserLogin, UserPublic, UserRegister
+from app.api.schemas.auth import (
+    ChangePasswordRequest,
+    ProfileUpdate,
+    TokenResponse,
+    UserLogin,
+    UserPublic,
+    UserRegister,
+)
 from app.core.config import settings
 from app.core.oauth import oauth
 from app.models.user import User
 from app.services.auth_service import (
     authenticate_local_user,
+    change_customer_password,
     refresh_access_token,
     register_local_user,
     revoke_refresh_token,
+    update_customer_profile,
     user_to_public,
 )
 from app.services.oauth_service import login_or_register_google
@@ -133,3 +142,29 @@ async def me(current_user: User = Depends(get_current_active_user)) -> UserPubli
     """Thông tin user từ access token."""
 
     return user_to_public(current_user)
+
+
+@router.patch("/me", response_model=UserPublic)
+async def update_me(
+    data: ProfileUpdate,
+    current_user: User = Depends(require_customer),
+) -> UserPublic:
+    """Customer cập nhật họ tên."""
+
+    user = await update_customer_profile(current_user, data.full_name)
+    return user_to_public(user)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: User = Depends(require_customer),
+) -> Response:
+    """Customer đổi mật khẩu (tài khoản local)."""
+
+    await change_customer_password(
+        current_user,
+        current_password=data.current_password,
+        new_password=data.new_password,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

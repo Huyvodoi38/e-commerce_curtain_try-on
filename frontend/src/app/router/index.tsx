@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/app/layout/AdminLayout'
+import { AccountLayout } from '@/app/layout/AccountLayout'
 import { PublicLayout } from '@/app/layout/PublicLayout'
 import { GuestOnly, RequireAdmin, RequireAuth, RequireStoreAccess } from '@/app/router/guards'
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage'
@@ -18,6 +19,7 @@ import { MyOrderDetailPage } from '@/features/orders/pages/MyOrderDetailPage'
 import { MyOrdersPage } from '@/features/orders/pages/MyOrdersPage'
 import { OrderPayPage } from '@/features/orders/pages/OrderPayPage'
 import { OrderPayReturnPage } from '@/features/orders/pages/OrderPayReturnPage'
+import { CustomerHomePage } from '@/features/home/pages/CustomerHomePage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { ProductListPage } from '@/features/products/pages/ProductListPage'
 import { AdminPromotionsPage } from '@/features/promotions/pages/AdminPromotionsPage'
@@ -25,16 +27,11 @@ import { CustomerLogsPage } from '@/features/users/pages/CustomerLogsPage'
 import { CustomersPage } from '@/features/users/pages/CustomersPage'
 import { StaffLogsPage } from '@/features/users/pages/StaffLogsPage'
 import { StaffPage } from '@/features/users/pages/StaffPage'
-import { PageShell } from '@/components/common/PageShell'
-
-function HomePage() {
-  return (
-    <PageShell
-      title="Curtain AI TryOn"
-      description="Frontend scaffold — bắt đầu từ Sprint: Auth → Products → Cart → Checkout"
-    />
-  )
-}
+import { AdminReviewsPage } from '@/features/reviews/pages/AdminReviewsPage'
+import { TryOnHistoryPage } from '@/features/try-on/pages/TryOnHistoryPage'
+import { AccountOverviewPage } from '@/features/account/pages/AccountOverviewPage'
+import { AccountProfilePage } from '@/features/account/pages/AccountProfilePage'
+import { AccountSecurityPage } from '@/features/account/pages/AccountSecurityPage'
 
 export function AppRouter() {
   return (
@@ -44,7 +41,7 @@ export function AppRouter() {
           <Route path="auth/callback" element={<AuthCallbackPage />} />
 
           <Route element={<RequireStoreAccess />}>
-            <Route index element={<HomePage />} />
+            <Route index element={<CustomerHomePage />} />
             <Route path="products" element={<ProductListPage />} />
             <Route path="products/:id" element={<ProductDetailPage />} />
 
@@ -55,6 +52,15 @@ export function AppRouter() {
               <Route path="orders/:id/pay" element={<OrderPayPage />} />
               <Route path="orders/:id/pay/return" element={<OrderPayReturnPage />} />
               <Route path="orders/:id" element={<MyOrderDetailPage />} />
+              <Route path="try-on/history" element={<TryOnHistoryPage />} />
+
+              <Route path="account" element={<AccountLayout />}>
+                <Route index element={<AccountOverviewPage />} />
+                <Route path="profile" element={<AccountProfilePage />} />
+                <Route path="security" element={<AccountSecurityPage />} />
+                <Route path="orders" element={<MyOrdersPage />} />
+                <Route path="try-on" element={<TryOnHistoryPage />} />
+              </Route>
             </Route>
 
             <Route element={<GuestOnly />}>
@@ -71,6 +77,7 @@ export function AppRouter() {
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="orders/:id" element={<AdminOrderDetailPage />} />
             <Route path="products" element={<AdminProductsPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="categories" element={<AdminCategoriesPage />} />
             <Route path="promotions" element={<AdminPromotionsPage />} />
             <Route path="customers" element={<CustomersPage />} />

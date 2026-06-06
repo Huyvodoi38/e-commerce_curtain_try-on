@@ -23,6 +23,8 @@ class Product(Document):
     display_image_url: str | None = None  # Denormalized: trùng image_urls[0]
     ai_texture_url: str | None = None  # Phase AI — tùy chọn tạm thời
     attributes: dict[str, Any] = Field(default_factory=dict)
+    rating_avg: float | None = None
+    rating_count: int = 0
     is_active: bool = True  # False = ẩn khỏi catalog public
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)

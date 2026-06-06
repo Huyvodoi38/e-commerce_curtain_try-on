@@ -41,6 +41,19 @@ class UserLogin(BaseModel):
         return value.strip().lower()
 
 
+class ProfileUpdate(BaseModel):
+    """Customer cập nhật hồ sơ."""
+
+    full_name: str = Field(..., min_length=1, max_length=120)
+
+
+class ChangePasswordRequest(BaseModel):
+    """Customer đổi mật khẩu (local)."""
+
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class UserPublic(BaseModel):
     """Thông tin user trả về client (không có mật khẩu)."""
 

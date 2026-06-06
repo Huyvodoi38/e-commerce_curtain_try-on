@@ -1,1 +1,1 @@
-"""Package ứng dụng Curtain AI TryOn Backend."""
+"""Package ứng dụng Quang Huy Shop Backend."""

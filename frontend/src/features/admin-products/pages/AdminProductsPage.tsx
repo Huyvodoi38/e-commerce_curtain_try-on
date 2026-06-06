@@ -16,7 +16,12 @@ import {
 } from '@/features/admin-products/hooks'
 import { useCategoriesQuery } from '@/features/categories/hooks'
 import { getErrorMessage } from '@/lib/api/client'
+import { ProductAttributesField, type ProductAttributeRow } from '@/features/admin-products/components/ProductAttributesField'
 import { ProductImagesField } from '@/features/admin-products/components/ProductImagesField'
+import {
+  attributesToRecord,
+  recordToAttributeRows,
+} from '@/lib/ai/promptResolver'
 import {
   resolveDraftItemsToUrls,
   revokeProductImageDrafts,
@@ -41,6 +46,7 @@ const emptyForm = {
   stock: 0,
   categories: [] as string[],
   imageItems: [] as ProductImageDraftItem[],
+  attributeRows: [{ key: '', value: '' }] as ProductAttributeRow[],
   isActive: true,
 }
 
@@ -112,6 +118,7 @@ export function AdminProductsPage() {
         stock: form.stock,
         categories: form.categories,
         image_urls,
+        attributes: attributesToRecord(form.attributeRows),
         is_active: form.isActive,
       })
       revokeProductImageDrafts(form.imageItems)
@@ -137,6 +144,7 @@ export function AdminProductsPage() {
         stock: detail.stock,
         categories: detail.categories,
         imageItems: savedUrlsToDraftItems(detail.image_urls),
+        attributeRows: recordToAttributeRows(detail.attributes),
         isActive: detail.is_active,
       })
     } catch {
@@ -159,6 +167,7 @@ export function AdminProductsPage() {
           stock: form.stock,
           categories: form.categories,
           image_urls,
+          attributes: attributesToRecord(form.attributeRows),
           is_active: form.isActive,
         },
       })
@@ -324,6 +333,14 @@ export function AdminProductsPage() {
             </div>
 
             <div className="md:col-span-2">
+              <ProductAttributesField
+                rows={form.attributeRows}
+                onChange={(attributeRows) => setForm((f) => ({ ...f, attributeRows }))}
+                disabled={!canManageProducts(role)}
+              />
+            </div>
+
+            <div className="md:col-span-2">
               <p className="mb-2 block text-sm font-medium text-foreground-muted">Danh mục</p>
               {categoriesQuery.isLoading ? (
                 <p className="text-sm text-foreground-subtle">Đang tải danh mục…</p>
@@ -334,7 +351,7 @@ export function AdminProductsPage() {
                     return (
                       <label
                         key={cat.id}
-                        className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm ${
+                        className={`relative inline-flex cursor-pointer rounded-md border px-3 py-1.5 text-sm ${
                           checked
                             ? 'border-brand bg-brand-subtle text-brand'
                             : 'border-border text-foreground-muted'

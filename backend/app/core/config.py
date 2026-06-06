@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Định nghĩa các biến môi trường cốt lõi cho backend."""
 
     MONGODB_URL: str
-    PROJECT_NAME: str = "Curtain AI TryOn"
+    PROJECT_NAME: str = "Quang Huy Shop"
     MONGODB_DB_NAME: str = "Curtain_AI_TryOn"
     BEANIE_ALLOW_INDEX_DROPPING: bool = True
 
@@ -59,7 +59,15 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = ""
     CLOUDINARY_FOLDER_PREFIX: str = "curtain"
 
+    # AI try-on — Colab + ngrok (tạm thời)
+    AI_SERVICE_URL: str = ""
+    AI_TRYON_TIMEOUT_SECONDS: int = 120
+
     model_config = SettingsConfigDict(env_file=str(BACKEND_DIR / ".env"))
+
+    @property
+    def ai_service_enabled(self) -> bool:
+        return bool(self.AI_SERVICE_URL.strip())
 
     @property
     def cloudinary_enabled(self) -> bool:

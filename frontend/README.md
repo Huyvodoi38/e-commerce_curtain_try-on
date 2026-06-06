@@ -1,4 +1,4 @@
-# Curtain AI TryOn — Frontend
+# Quang Huy Shop — Frontend
 
 React + TypeScript + Vite + Tailwind CSS v4.
 

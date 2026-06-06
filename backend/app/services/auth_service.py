@@ -162,6 +162,65 @@ async def refresh_access_token(refresh_plain: str) -> tuple[User, str, str]:
     return user, access, new_refresh
 
 
+async def update_customer_profile(user: User, full_name: str) -> User:
+    """Customer tự cập nhật họ tên."""
+
+    trimmed = full_name.strip()
+    if user.full_name == trimmed:
+        return user
+
+    old_name = user.full_name
+    user.full_name = trimmed
+    await user.save()
+    await audit_service.log_activity(
+        actor=user,
+        action=ActivityAction.USER_UPDATED,
+        customer_id=user.id,
+        target_user_id=user.id,
+        metadata={
+            "self_service": True,
+            "full_name": {"from": old_name, "to": trimmed},
+            "target_label": audit_service.user_label(user),
+        },
+    )
+    return user
+
+
+async def change_customer_password(
+    user: User,
+    *,
+    current_password: str,
+    new_password: str,
+) -> None:
+    """Customer đổi mật khẩu tài khoản local."""
+
+    if user.auth_provider != AuthProvider.LOCAL or user.hashed_password is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chỉ tài khoản đăng nhập bằng username mới đổi mật khẩu tại đây",
+        )
+
+    if not verify_password(current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu hiện tại không đúng",
+        )
+
+    user.hashed_password = hash_password(new_password)
+    await user.save()
+    await audit_service.log_activity(
+        actor=user,
+        action=ActivityAction.USER_UPDATED,
+        customer_id=user.id,
+        target_user_id=user.id,
+        metadata={
+            "self_service": True,
+            "password": {"changed": True},
+            "target_label": audit_service.user_label(user),
+        },
+    )
+
+
 async def revoke_refresh_token(refresh_plain: str) -> None:
     """Thu hồi refresh token khi logout."""
 

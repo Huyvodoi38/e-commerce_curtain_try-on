@@ -1,13 +1,10 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { PageShell } from '@/components/common/PageShell'
 import { Pagination, resolveTotalPages } from '@/components/common/Pagination'
+import { ProductCard } from '@/features/products/components/ProductCard'
 import { getErrorMessage } from '@/lib/api/client'
-import { cdnImage, cdnPresets } from '@/lib/cloudinary/url'
-import { productPrimaryImageUrl } from '@/lib/products/images'
-import { formatVnd } from '@/lib/utils/formatCurrency'
 import { useCategoryQuery } from '@/features/categories/hooks'
 import { useProductsQuery } from '@/features/products/hooks'
-import { productDetailPath } from '@/lib/catalog/products'
 
 const PAGE_SIZE = 12
 
@@ -72,52 +69,9 @@ export function ProductListPage() {
         <>
           <div className="mb-4 text-sm text-foreground-subtle">Tìm thấy {data.total} sản phẩm</div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((item) => {
-              const thumb = cdnImage(productPrimaryImageUrl(item), cdnPresets.productCard)
-              return (
-              <article
-                key={item.id}
-                className="overflow-hidden rounded-xl border border-border bg-surface-raised transition-shadow hover:shadow-md"
-              >
-                <Link to={productDetailPath(item.id)} className="block">
-                  <div className="aspect-[4/3] bg-surface-muted">
-                    {thumb ? (
-                      <img
-                        src={thumb}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-foreground-subtle">
-                        Chưa có ảnh
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                <div className="space-y-2 p-4">
-                  <h3 className="line-clamp-2 font-medium text-foreground">
-                    <Link to={productDetailPath(item.id)} className="hover:text-brand">
-                      {item.name}
-                    </Link>
-                  </h3>
-                  <p className="line-clamp-2 text-sm text-foreground-muted">
-                    {item.description ?? 'Đang cập nhật mô tả sản phẩm.'}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-brand">{formatVnd(item.effective_price)}</span>
-                    {item.is_on_sale && item.sale_price ? (
-                      <span className="text-sm text-foreground-subtle line-through">
-                        {formatVnd(item.price)}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="text-sm text-foreground-subtle">
-                    {item.stock > 0 ? `Còn ${item.stock}` : 'Hết hàng'}
-                  </div>
-                </div>
-              </article>
-            )})}
+            {data.items.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
           </div>
           <Pagination
             page={page}

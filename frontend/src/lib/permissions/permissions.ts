@@ -55,3 +55,15 @@ export function canPatchProductStock(role: UserRole): boolean {
 export function canViewSystemAuditLogs(role: UserRole): boolean {
   return isManager(role)
 }
+
+export function canViewAdminReviews(role: UserRole): boolean {
+  return isStaffOrAbove(role)
+}
+
+export function canManageReviews(role: UserRole): boolean {
+  return isManager(role)
+}
+
+export function canDeleteReviews(role: UserRole): boolean {
+  return isStaffOrAbove(role)
+}

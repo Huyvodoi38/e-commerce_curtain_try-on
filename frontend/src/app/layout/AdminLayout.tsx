@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   IconAdminHome,
@@ -9,6 +10,7 @@ import {
   IconOrders,
   IconProducts,
   IconPromotions,
+  IconReviews,
   IconStaff,
   IconSystemLogs,
 } from '@/components/layout/adminNavIcons'
@@ -21,6 +23,7 @@ import {
   canManageStaff,
   canViewAdminCategories,
   canViewAdminProducts,
+  canViewAdminReviews,
   canViewSystemAuditLogs,
 } from '@/lib/permissions/permissions'
 import type { UserRole } from '@/types/auth'
@@ -44,6 +47,7 @@ const navItems: NavItem[] = [
   { to: '/admin/stats', label: 'Thống kê', Icon: IconChartBar, visible: canAccessAdmin },
   { to: '/admin/orders', label: 'Đơn hàng', Icon: IconOrders, visible: canManageOrders },
   { to: '/admin/products', label: 'Sản phẩm', Icon: IconProducts, visible: canViewAdminProducts },
+  { to: '/admin/reviews', label: 'Đánh giá', Icon: IconReviews, visible: canViewAdminReviews },
   { to: '/admin/categories', label: 'Danh mục', Icon: IconCategories, visible: canViewAdminCategories },
   { to: '/admin/promotions', label: 'Khuyến mãi', Icon: IconPromotions, visible: canManagePromotions },
   { to: '/admin/customers', label: 'Khách hàng', Icon: IconCustomers, visible: canManageCustomers },
@@ -63,9 +67,18 @@ export function AdminLayout() {
     navigate('/login')
   }
 
+  // Tránh body + main cùng scroll (min-h-screen trên body gây vùng trắng dài)
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [])
+
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-muted">
-      <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-border bg-surface-raised p-4">
+    <div className="flex h-dvh overflow-hidden bg-surface-muted">
+      <aside className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-surface-raised p-4">
         <Link
           to="/admin"
           className="mb-6 flex shrink-0 items-center gap-2 text-lg font-semibold text-brand"
@@ -105,7 +118,7 @@ export function AdminLayout() {
           Đăng xuất
         </button>
       </aside>
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         <Outlet />
       </main>
     </div>

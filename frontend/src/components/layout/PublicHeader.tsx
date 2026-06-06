@@ -12,7 +12,7 @@ export function PublicHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface-raised shadow-sm">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
         <Link to="/" className="shrink-0 text-lg font-bold tracking-tight text-brand">
-          Curtain AI TryOn
+          Quang Huy Shop
         </Link>
 
         <HeaderSearch />
