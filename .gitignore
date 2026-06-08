@@ -55,3 +55,5 @@ desktop.ini
 # --- Deploy / cache tạm ---
 .vercel/
 *.tsbuildinfo
+
+SOICT_DATN_Application_VIE_Template/

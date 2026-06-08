@@ -77,6 +77,13 @@ services:
       - key: VNPAY_RETURN_URL_TEMPLATE
         sync: false
 
+      # --- AI try-on (Colab + ngrok — tuỳ chọn) ---
+      - key: AI_SERVICE_URL
+        sync: false
+      # Shared secret backend↔Colab (đặt cùng giá trị ở Cell 4 notebook)
+      - key: AI_SERVICE_TOKEN
+        sync: false
+
       # --- Cloudinary (ảnh sản phẩm) ---
       - key: CLOUDINARY_CLOUD_NAME
         sync: false

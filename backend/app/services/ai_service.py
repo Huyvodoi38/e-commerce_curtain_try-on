@@ -123,6 +123,8 @@ async def _call_ai_service(
         )
 
     headers = {"ngrok-skip-browser-warning": "true"}
+    if settings.AI_SERVICE_TOKEN.strip():
+        headers["X-AI-Token"] = settings.AI_SERVICE_TOKEN.strip()
     timeout = httpx.Timeout(settings.AI_TRYON_TIMEOUT_SECONDS, connect=30.0)
 
     try:

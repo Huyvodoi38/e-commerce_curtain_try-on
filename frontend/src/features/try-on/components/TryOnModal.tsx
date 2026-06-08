@@ -52,6 +52,10 @@ export function TryOnModal({ productId, productName, open, onClose }: Props) {
 
   async function handlePreview() {
     if (!roomFile || !bbox) return
+    if (!isCustomer) {
+      navigate(loginPathWithRedirect(location.pathname))
+      return
+    }
     setError(null)
     setSavedNotice(null)
     try {
@@ -167,14 +171,21 @@ export function TryOnModal({ productId, productName, open, onClose }: Props) {
 
         <div className="flex flex-wrap gap-2 border-t border-border px-5 py-4">
           {!previewBase64 ? (
-            <button
-              type="button"
-              onClick={() => void handlePreview()}
-              disabled={!roomFile || !bbox || previewMutation.isPending}
-              className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-on-brand disabled:opacity-50"
-            >
-              {previewMutation.isPending ? 'Đang tạo…' : 'Tạo preview'}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void handlePreview()}
+                disabled={!roomFile || !bbox || previewMutation.isPending}
+                className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-on-brand disabled:opacity-50"
+              >
+                {previewMutation.isPending ? 'Đang tạo…' : 'Tạo preview'}
+              </button>
+              {!isCustomer && meQuery.isSuccess ? (
+                <p className="w-full text-xs text-foreground-subtle">
+                  Cần đăng nhập tài khoản khách hàng để dùng thử rèm AI.
+                </p>
+              ) : null}
+            </>
           ) : (
             <>
               <button

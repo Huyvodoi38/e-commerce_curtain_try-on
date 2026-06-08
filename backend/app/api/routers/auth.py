@@ -21,6 +21,7 @@ from app.api.schemas.auth import (
 )
 from app.core.config import settings
 from app.core.oauth import oauth
+from app.core.rate_limit import rate_limit
 from app.models.user import User
 from app.services.auth_service import (
     authenticate_local_user,
@@ -36,8 +37,16 @@ from app.utils.redirect_path import sanitize_redirect_path
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Chặn brute-force/đăng ký hàng loạt theo IP.
+_auth_rate_limit = rate_limit(limit=10, window_seconds=60, scope="auth")
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(_auth_rate_limit)],
+)
 async def register(data: UserRegister, response: Response) -> TokenResponse:
     """Đăng ký tài khoản username + mật khẩu."""
 
@@ -46,7 +55,11 @@ async def register(data: UserRegister, response: Response) -> TokenResponse:
     return TokenResponse(access_token=access, user=user_to_public(user))
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    dependencies=[Depends(_auth_rate_limit)],
+)
 async def login(data: UserLogin, response: Response) -> TokenResponse:
     """Đăng nhập bằng username + mật khẩu."""
 
@@ -110,7 +123,11 @@ async def google_callback(request: Request) -> RedirectResponse:
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    dependencies=[Depends(_auth_rate_limit)],
+)
 async def refresh_session(request: Request, response: Response) -> TokenResponse:
     """Đổi refresh cookie lấy access token mới."""
 

@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://127.0.0.1:5173"
     # Dev: True = thêm origin localhost/127.0.0.1:5173 (không dùng wildcard *)
     CORS_ALLOW_ALL: bool = True
+    # Rate limiting theo IP (tắt trong test để tránh 429 khi chạy hàng loạt)
+    RATE_LIMIT_ENABLED: bool = True
 
     # Cookie refresh token
     COOKIE_SECURE: bool = False
@@ -62,6 +64,8 @@ class Settings(BaseSettings):
     # AI try-on — Colab + ngrok (tạm thời)
     AI_SERVICE_URL: str = ""
     AI_TRYON_TIMEOUT_SECONDS: int = 120
+    # Shared secret backend↔Colab — gửi trong header X-AI-Token để chặn truy cập lạ
+    AI_SERVICE_TOKEN: str = ""
 
     model_config = SettingsConfigDict(env_file=str(BACKEND_DIR / ".env"))
 

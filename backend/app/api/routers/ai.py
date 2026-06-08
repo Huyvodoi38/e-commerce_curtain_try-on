@@ -4,13 +4,21 @@ from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from app.api.dependencies import require_customer
 from app.api.schemas.ai import TryOnHistoryResponse, TryOnPreviewResponse, TryOnSaveResponse
+from app.core.rate_limit import rate_limit
 from app.models.user import User
 from app.services import ai_service
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
+# Tác vụ AI rất nặng (GPU) → giới hạn chặt theo IP để tránh lạm dụng.
+_ai_rate_limit = rate_limit(limit=6, window_seconds=60, scope="ai")
 
-@router.post("/try-on/preview", response_model=TryOnPreviewResponse)
+
+@router.post(
+    "/try-on/preview",
+    response_model=TryOnPreviewResponse,
+    dependencies=[Depends(_ai_rate_limit)],
+)
 async def try_on_preview(
     product_id: str = Form(...),
     room_image: UploadFile = File(...),
@@ -18,10 +26,11 @@ async def try_on_preview(
     y_min: int = Form(...),
     x_max: int = Form(...),
     y_max: int = Form(...),
+    current_user: User = Depends(require_customer),
 ) -> TryOnPreviewResponse:
     """
     Tạo preview try-on — không upload Cloudinary, không ghi lịch sử.
-    Cần Colab + ngrok (AI_SERVICE_URL).
+    Yêu cầu đăng nhập khách hàng. Cần Colab + ngrok (AI_SERVICE_URL).
     """
 
     return await ai_service.preview_try_on(
@@ -34,7 +43,12 @@ async def try_on_preview(
     )
 
 
-@router.post("/try-on/save", response_model=TryOnSaveResponse, status_code=201)
+@router.post(
+    "/try-on/save",
+    response_model=TryOnSaveResponse,
+    status_code=201,
+    dependencies=[Depends(_ai_rate_limit)],
+)
 async def try_on_save(
     product_id: str = Form(...),
     room_image: UploadFile = File(...),
