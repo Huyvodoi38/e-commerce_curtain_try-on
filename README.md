@@ -11,7 +11,6 @@ Fullstack monorepo gồm:
 
 ```bash
 cd backend
-cp .env.example .env
 pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
@@ -20,18 +19,11 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
 Frontend chạy tại `http://localhost:5173`, backend tại `http://127.0.0.1:8000`.
-
-## Quality gates
-
-- Backend: `pytest -q`
-- Frontend: `npm run lint` và `npm run build`
-- CI workflow: `.github/workflows/ci.yml`
 
 ## Production env safety
 
