@@ -14,7 +14,7 @@ export function HomeHero() {
             Rèm cửa đẹp — Thử AI trước khi mua
           </h1>
           <p className="text-base leading-relaxed text-foreground-muted">
-            Khám phá hàng trăm mẫu rèm voan, blackout, phòng khách… Upload ảnh phòng và xem rèm hiển thị trực tiếp
+            Khám phá hàng trăm mẫu rèm trơn, vải, phòng khách… Upload ảnh phòng và xem rèm hiển thị trực tiếp
             với công nghệ AI.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
@@ -44,9 +44,9 @@ export function HomeHero() {
 
         <div className="grid w-full max-w-md grid-cols-2 gap-3 lg:shrink-0">
           <HeroStat label="Thử rèm AI" value="Trực tiếp trên ảnh phòng" />
-          <HeroStat label="Đa dạng mẫu" value="Voan, blackout, phòng ngủ" />
+          <HeroStat label="Đa dạng mẫu" value="Trơn, vải, phòng ngủ" />
           <HeroStat label="Thanh toán" value="COD / chuyển khoản" />
-          <HeroStat label="Đánh giá" value="Từ khách hàng thật" />
+          <HeroStat label="Đánh giá" value="Trực quan" />
         </div>
       </div>
     </section>
