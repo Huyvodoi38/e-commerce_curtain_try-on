@@ -86,7 +86,7 @@ export function AdminReviewsPage() {
   }
 
   return (
-    <PageShell title="Đánh giá sản phẩm" description="Quản lý đánh giá khách hàng và thêm đánh giá thủ công.">
+    <PageShell title="Đánh giá sản phẩm">
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <FormField label="Tìm kiếm" htmlFor="review-search">
           <input

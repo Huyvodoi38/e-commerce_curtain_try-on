@@ -47,7 +47,7 @@ async def register_local_user(data: UserRegister) -> tuple[User, str, str]:
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username đã được sử dụng",
+            detail="Tên đăng nhập đã được sử dụng",
         )
 
     # Đăng ký public chỉ tạo khách hàng — staff/manager do quản lý tạo (phase Users)
@@ -82,7 +82,7 @@ async def authenticate_local_user(data: UserLogin) -> tuple[User, str, str]:
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Username hoặc mật khẩu không đúng",
+            detail="Tên đăng nhập hoặc mật khẩu không đúng",
         )
     if not user.is_active:
         raise HTTPException(
@@ -197,7 +197,7 @@ async def change_customer_password(
     if user.auth_provider != AuthProvider.LOCAL or user.hashed_password is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Chỉ tài khoản đăng nhập bằng username mới đổi mật khẩu tại đây",
+            detail="Chỉ tài khoản đăng nhập bằng tên đăng nhập mới đổi mật khẩu tại đây",
         )
 
     if not verify_password(current_password, user.hashed_password):

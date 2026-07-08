@@ -114,7 +114,7 @@ function AiResolveBadge({ resolve }: { resolve: AiResolveResult }) {
   if (resolve.available) {
     return (
       <p className="rounded-lg border border-success-700/20 bg-success-50 px-3 py-2 text-sm text-success-700">
-        Đủ điều kiện thử rèm AI — thuộc tính map được sang prompt.
+        Đủ điều kiện thử rèm AI.
       </p>
     )
   }
@@ -128,10 +128,6 @@ function AiResolveBadge({ resolve }: { resolve: AiResolveResult }) {
       {resolve.unmapped.length ? (
         <p className="mt-1">Không nhận diện: {resolve.unmapped.join('; ')}</p>
       ) : null}
-      <p className="mt-1 text-xs opacity-80">
-        Dùng tên field gợi ý (Màu sắc, Chất liệu, Kiểu hoa văn, Độ che sáng) và giá trị tiếng Việt
-        phổ biến.
-      </p>
     </div>
   )
 }

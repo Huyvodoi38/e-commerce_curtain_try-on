@@ -615,13 +615,12 @@ export function AdminProductsPage() {
               <>
                 Tạo sản phẩm{' '}
                 <span className="font-medium text-foreground">{form.name.trim()}</span> trên cửa
-                hàng? Ảnh mới sẽ được tải lên Cloudinary khi bạn xác nhận.
+                hàng?
               </>
             ) : confirmAction.type === 'update' ? (
               <>
                 Lưu thay đổi cho sản phẩm{' '}
-                <span className="font-medium text-foreground">{form.name.trim()}</span>? Ảnh mới sẽ
-                được tải lên Cloudinary; ảnh đã gỡ sẽ bị xóa trên Cloudinary.
+                <span className="font-medium text-foreground">{form.name.trim()}</span>?
               </>
             ) : confirmAction.type === 'stock' ? (
               <>
